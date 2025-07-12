@@ -184,8 +184,8 @@ ${readmore}
 });
 
 
-const { exec } = require("child_process");
-/*
+
+
 gmd({
     pattern: "update",
     desc: "Update bot from GitHub and restart.",
@@ -208,7 +208,7 @@ async (Gifted, mek, m, { from, isOwner, reply }) => {
     } catch (e) {
         reply("❌ Update failed: " + e);
     }
-});*/
+});
 
 gmd({
     pattern: "checkupdate",
