@@ -387,7 +387,6 @@ const groupAdmins = isGroup ? getGroupAdmins(participants) : '';
 const isBotAdmins = isGroup ? groupAdmins.includes(botNumber2) : false;
 const isAdmins = isGroup ? groupAdmins.includes(sender) : false;
 const isReact = m.message.reactionMessage ? true : false;
-
 // --- ANTI-LINK HANDLER (Place this after isGroup, isAdmins, isBotAdmins are set) ---
 if (isGroup && !isAdmins && isBotAdmins) {
     let cleanBody = body.replace(/[\s\u200b-\u200d\uFEFF]/g, '').toLowerCase();
@@ -433,7 +432,6 @@ if (isGroup && !isAdmins && isBotAdmins) {
     }
 }
 // --- END ANTI-LINK HANDLER ---
-      
 const reply = (teks) => {
   Gifted.sendMessage(from, { text: teks }, { quoted: mek });
 };
