@@ -388,6 +388,52 @@ const isBotAdmins = isGroup ? groupAdmins.includes(botNumber2) : false;
 const isAdmins = isGroup ? groupAdmins.includes(sender) : false;
 const isReact = m.message.reactionMessage ? true : false;
 
+// --- ANTI-LINK HANDLER (Place this after isGroup, isAdmins, isBotAdmins are set) ---
+if (isGroup && !isAdmins && isBotAdmins) {
+    let cleanBody = body.replace(/[\s\u200b-\u200d\uFEFF]/g, '').toLowerCase();
+    const urlRegex = /(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+([\/?][^\s]*)?/gi;
+    if (urlRegex.test(cleanBody)) {
+        if (!global.userWarnings) global.userWarnings = {};
+        let userWarnings = global.userWarnings;
+        if (config.ANTILINK === "true") {
+            await Gifted.sendMessage(from, { delete: mek.key });
+            await Gifted.sendMessage(from, {
+                text: `⚠️ Links are not allowed in this group.\n@${sender.split('@')[0]} you are being removed.`,
+                mentions: [sender]
+            }, { quoted: mek });
+            await Gifted.groupParticipantsUpdate(from, [sender], 'remove');
+            return;
+        } else if (config.ANTILINK === "warn") {
+            if (!userWarnings[sender]) userWarnings[sender] = 0;
+            userWarnings[sender] += 1;
+            if (userWarnings[sender] <= 3) {
+                await Gifted.sendMessage(from, { delete: mek.key });
+                await Gifted.sendMessage(from, {
+                    text: `⚠️ @${sender.split('@')[0]}, this is your ${userWarnings[sender]} warning. Please avoid sharing links so that you are not removed upon reaching your warn limit.`,
+                    mentions: [sender]
+                }, { quoted: mek });
+            } else {
+                await Gifted.sendMessage(from, { delete: mek.key });
+                await Gifted.sendMessage(from, {
+                    text: `🚨 @${sender.split('@')[0]} has been removed after exceeding the maximum number of warn limit.`,
+                    mentions: [sender]
+                }, { quoted: mek });
+                await Gifted.groupParticipantsUpdate(from, [sender], 'remove');
+                userWarnings[sender] = 0;
+            }
+            return;
+        } else if (config.ANTILINK === "delete") {
+            await Gifted.sendMessage(from, { delete: mek.key });
+            await Gifted.sendMessage(from, {
+                text: `⚠️ Links are not allowed in this group.\nPlease @${sender.split('@')[0]} take note.`,
+                mentions: [sender]
+            }, { quoted: mek });
+            return;
+        }
+    }
+}
+// --- END ANTI-LINK HANDLER ---
+      
 const reply = (teks) => {
   Gifted.sendMessage(from, { text: teks }, { quoted: mek });
 };
