@@ -209,7 +209,7 @@ async (Gifted, mek, m, { from, isOwner, reply }) => {
         reply("❌ Update failed: " + e);
     }
 });
-
+/*
 gmd({
     pattern: "checkupdate",
     desc: "Check for new Updates on GitHub Repository",
@@ -237,8 +237,7 @@ async (Gifted, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, s
         reply(`❌ Error: ${e.message}`);
     }
 });
-
-
+*/
 gmd({
     pattern: "checkstatus",
     desc: "Check the Status of the Bot",
