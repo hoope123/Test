@@ -184,9 +184,11 @@ ${readmore}
 });
 
 
+const { exec } = require("child_process");
+
 gmd({
     pattern: "update",
-    desc: "Update bot from GitHub & MEGA, then restart.",
+    desc: "Update bot from GitHub and restart.",
     category: "owner",
     react: "🔄",
     filename: __filename
@@ -195,39 +197,13 @@ async (Gifted, mek, m, { from, isOwner, reply }) => {
     if (!isOwner) return reply("*Owner Only Command*");
     try {
         await reply("🔄 Updating bot...\nPulling latest code from GitHub...");
-       
-        // Step 1: Pull the latest GitHub code (optional, but recommended)
         await new Promise((resolve, reject) => {
-            exec("git pull", (err, stdout, stderr) => {
-                if (err) return reject(stderr);
-                resolve(stdout);
+            exec("git pull https://github.com/hoope123/Test main", (err, stdout, stderr) => {
+                if (err) return reject(stderr || err);
+                resolve(stdout || "Update complete.");
             });
         });
-
-        await reply("✅ GitHub code pulled.\nFetching MEGA ZIP link...");
-
-        // Step 2: Get MEGA zip link from your JSON config
-        const response = await axios.get("https://raw.githubusercontent.com/Princemaye/nothing/refs/heads/main/prince-md.json");
-        const { zipmegalink } = response.data;
-
-        // Step 3: Download and extract MEGA ZIP
-        await reply("⬇️ Downloading and extracting files from MEGA...");
-        const megaFile = File.fromURL(zipmegalink);
-        const zipFilePath = path.join(process.cwd(), "prince-mdx.zip");
-
-        await new Promise((resolve, reject) => {
-            megaFile.download((error, fileBuffer) => {
-                if (error) return reject(error);
-                fs.writeFileSync(zipFilePath, fileBuffer);
-                const zip = new AdmZip(zipFilePath);
-                zip.extractAllTo(process.cwd(), true);
-                fs.unlinkSync(zipFilePath);
-                resolve();
-            });
-        });
-
-        await reply("✅ All bot files updated!\nRestarting bot...");
-
+        await reply("✅ Update complete! Restarting bot...");
         setTimeout(() => process.exit(0), 1500);
     } catch (e) {
         reply("❌ Update failed: " + e);
