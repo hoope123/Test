@@ -465,8 +465,39 @@ reply(`${e}`)
 }
 })
 
+
+
 gmd({
     pattern: "ping",
+    alias: ["speed"],
+    desc: "Check Bot's Response Speed.",
+    category: "general",
+    react: "⚡",
+    filename: __filename
+},
+async (Gifted, mek, m, { from, quoted, isOwner, reply }) => {
+    try {
+        const startTime = Date.now() 
+        const message = await Gifted.sendMessage(from, 
+            { text: '*Checking Speed...*' }, 
+            { quoted: mek });
+        const endTime = Date.now()
+        const ping = (endTime - startTime);
+        const text = `*Pong: ${ping} ms*`;
+        await Gifted.sendMessage(from, {
+            text: text,
+            edit: message.key }, 
+            { quoted: mek });
+        await m.react("✅"); 
+    } catch (e) {
+        console.log(e);
+        reply(`${e}`);
+    }
+});
+
+
+gmd({
+    pattern: "ping2",
     alias: ["speed"],
     desc: "Check Bot's Response Speed.",
     category: "general",
