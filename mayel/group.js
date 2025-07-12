@@ -752,41 +752,30 @@ gmd({
   }
 });
 
+
 gmd({
     on: "body"
 }, async (Gifted, mek, m, { from, body, sender, isGroup, isAdmins, isBotAdmins, reply }) => {
     try {
         if (!isGroup || isAdmins || !isBotAdmins) return;
-        const linkPatterns = [
-            /https?:\/\/(?:chat\.whatsapp\.com|wa\.me)\/\S+/gi,   
-            /https?:\/\/(?:t\.me|telegram\.me)\/\S+/gi,           
-            /https?:\/\/(?:www\.)?linkedin\.com\/\S+/gi,         
-            /https?:\/\/(?:www\.)?snapchat\.com\/\S+/gi,         
-            /https?:\/\/(?:www\.)?pinterest\.com\/\S+/gi,         
-            /https?:\/\/(?:www\.)?reddit\.com\/\S+/gi,            
-            /https?:\/\/ngl\/\S+/gi,                             
-            /https?:\/\/(?:www\.)?discord\.com\/\S+/gi,           
-            /https?:\/\/(?:www\.)?twitch\.tv\/\S+/gi,             
-            /https?:\/\/(?:www\.)?vimeo\.com\/\S+/gi,            
-            /https?:\/\/(?:www\.)?dailymotion\.com\/\S+/gi,      
-            /https?:\/\/(?:www\.)?medium\.com\/\S+/gi,
-            /https?:\/\/(?:www\.)?tiktok\.com\/\S+/gi,          
-            /https?:\/\/(?:vm\.)?tiktok\.com\/\S+/gi,            
-            /https?:\/\/(?:www\.)?tiktoklite\.com\/\S+/gi,       
-            /https?:\/\/(?:www\.)?t\.co\/\S+/gi,                
-            /https?:\/\/(?:www\.)?tiktok\.lite\/\S+/gi,          
-            /https?:\/\/(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:\/\S*)?/gi 
-        ];
-        const containsLink = linkPatterns.some(pattern => pattern.test(body));
+
+        // Normalize message: remove spaces and zero-width characters, lowercase it
+        let cleanBody = body.replace(/[\s\u200b-\u200d\uFEFF]/g, '').toLowerCase();
+
+        // Robust URL regex: catches with/without protocol, subdomains, paths, etc.
+        const urlRegex = /(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+([\/?][^\s]*)?/gi;
+
+        const containsLink = urlRegex.test(cleanBody);
+
         if (containsLink) {
             if (config.ANTILINK === "true") {
                 await Gifted.sendMessage(from, { delete: mek.key });
                 await Gifted.sendMessage(from, {
                     text: `⚠️ Links are not allowed in this group.\n@${sender.split('@')[0]} you are being removed.`,
-                    mentions: [sender] 
+                    mentions: [sender]
                 }, { quoted: mek });
                 await Gifted.groupParticipantsUpdate(from, [sender], 'remove');
-            } 
+            }
             else if (config.ANTILINK === "warn") {
                 if (!userWarnings[sender]) userWarnings[sender] = 0;
                 userWarnings[sender] += 1;
@@ -803,14 +792,14 @@ gmd({
                         mentions: [sender]
                     }, { quoted: mek });
                     await Gifted.groupParticipantsUpdate(from, [sender], 'remove');
-                    userWarnings[sender] = 0; 
+                    userWarnings[sender] = 0;
                 }
             }
             else if (config.ANTILINK === "delete") {
                 await Gifted.sendMessage(from, { delete: mek.key });
                 await Gifted.sendMessage(from, {
                     text: `⚠️ Links are not allowed in this group.\nPlease @${sender.split('@')[0]} take note.`,
-                    mentions: [sender] 
+                    mentions: [sender]
                 }, { quoted: mek });
             }
         }
