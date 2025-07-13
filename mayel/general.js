@@ -477,68 +477,29 @@ gmd({
 },
 async (Gifted, mek, m, { from, quoted, isOwner, reply }) => {
     try {
-        const startTime = Date.now() 
-        const message = await Gifted.sendMessage(from, 
-            { text: '*Checking Speed...*' }, 
-            { quoted: mek });
-        const endTime = Date.now()
-        const ping = (endTime - startTime);
-        const text = `*Pong: ${ping} ms*`;
+        const startTime = Date.now();
+        await Gifted.sendMessage(from, { text: "🏓 Pinging..." }, { quoted: mek });
+        const endTime = Date.now();
+        const ping = endTime - startTime;
         await Gifted.sendMessage(from, {
-            text: text,
-            edit: message.key }, 
-            { quoted: mek });
+            text: `*Pᴏɴɢ: ${ping} ᴍs*`,
+            contextInfo: {
+                mentionedJid: [m.sender],
+                forwardingScore: 1,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: '120363322606369079@newsletter',
+                    newsletterName: "PRINCE TECH",
+                    serverMessageId: 143
+                }
+            }
+        }, { quoted: mek });
         await m.react("✅"); 
     } catch (e) {
         console.log(e);
         reply(`${e}`);
     }
 });
-
-
-gmd({
-    pattern: "ping2",
-    alias: ["speed"],
-    desc: "Check Bot's Response Speed.",
-    category: "general",
-    react: "⚡",
-    filename: __filename
-},
-async (Gifted, mek, m, { from, quoted, isOwner, reply }) => {
-    try {
-        const startTime = Date.now() 
-        const message = await Gifted.sendMessage(from, 
-            { text: '*Checking Speed...*' }, 
-            { quoted: mek });
-        const endTime = Date.now()
-        const ping = (endTime - startTime);
-        await Gifted.sendMessage(from, {
-          delete: message.key }, 
-          { quoted: mek });
-        // const text = `*Pong: ${ping} ms*`;
-        // await Gifted.sendMessage(from, { text: text, edit: message.key },
-       // { quoted: mek });
-        await Gifted.sendMessage(from, {
-          text: `*Pᴏɴɢ: ${ping} ᴍs*`,
-          contextInfo: {
-              mentionedJid: [m.sender], 
-              groupMentions: [],
-              forwardingScore: 1,
-              isForwarded: true,
-              forwardedNewsletterMessageInfo: {
-                  newsletterJid: '120363322606369079@newsletter',
-                        newsletterName: "PRINCE TECH",
-                  serverMessageId: 143
-              }
-          }
-      }, { quoted: mek });
-        await m.react("✅"); 
-    } catch (e) {
-        console.log(e);
-        reply(`${e}`);
-    }
-});
-
 
 gmd({
   pattern: "owner",
