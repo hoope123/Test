@@ -24,6 +24,7 @@
   "dependencies": {
     "@vitalets/google-translate-api": "^9.2.0",
     "adm-zip": "^0.5.16",
+    "unzipper": "^0.10.11",
     "axios": "^1.2.5",
     "buffer": "^6.0.3",
     "cheerio": "^1.0.0-rc.12",
