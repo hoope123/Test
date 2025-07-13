@@ -1,5 +1,5 @@
 const { File } = require("megajs");
-const https = require("https");
+const { https } = require("follow-redirects");
 const unzipper = require("unzipper");
 const { exec } = require("child_process"),
    path = require("path"),
