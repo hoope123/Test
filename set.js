@@ -25,7 +25,7 @@ OWNER_NAME: process.env.OWNER_NAME || "𝐏𝐑𝐈𝐍𝐂𝐄", // Input Yours
 PACK_AUTHOR: process.env.PACK_AUTHOR || "𝐏𝐑𝐈𝐍𝐂𝐄 𝐓𝐄𝐂𝐇", // Added // Input Yours custom...
 PACK_NAME: process.env.PACK_NAME || "𝐏𝐑𝐈𝐍𝐂𝐄 𝐓𝐄𝐂𝐇", // Added // Input Yours custom...
 PREFIX: process.env.PREFIX || "*",
-VERSION: process.env.VERSION || "3.0.0",
+VERSION: process.env.VERSION || "3.5.0",
 ANTILINK: process.env.ANTILINK || "false", //  Enter true to kick automatically or delete to delete without kicking or warn to warn before kicking
 ANTICALL: process.env.ANTICALL || "false",
 ANTIBAD: process.env.ANTIBAD || "false",
