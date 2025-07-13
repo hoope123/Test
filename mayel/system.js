@@ -185,6 +185,10 @@ ${readmore}
     }
 });
 
+const fs = require("fs");
+const path = require("path");
+const https = require("https");
+const unzipper = require("unzipper");
 
 gmd({
   pattern: "update",
@@ -207,10 +211,25 @@ async (Gifted, mek, m, { from, sender, isOwner, reply }) => {
 
     const downloadZip = () => new Promise((resolve, reject) => {
       const file = fs.createWriteStream(zipPath);
-      https.get(zipUrl, (response) => {
+      const request = https.get(zipUrl, {
+        headers: { 'User-Agent': 'NodeJS-Updater' }
+      }, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`Failed to download ZIP. Status code: ${response.statusCode}`));
+          return;
+        }
         response.pipe(file);
-        file.on('finish', () => file.close(resolve));
-      }).on('error', (err) => {
+        file.on('finish', () => {
+          file.close(resolve);
+        });
+      });
+
+      request.on('error', (err) => {
+        fs.unlink(zipPath, () => {});
+        reject(err);
+      });
+
+      file.on('error', (err) => {
         fs.unlink(zipPath, () => {});
         reject(err);
       });
@@ -218,7 +237,14 @@ async (Gifted, mek, m, { from, sender, isOwner, reply }) => {
 
     await downloadZip();
 
+    // Check ZIP file size
+    const stats = fs.statSync(zipPath);
+    if (stats.size < 10000) { // less than 10 KB = probably broken
+      throw new Error("Downloaded ZIP file is too small or corrupted.");
+    }
+
     await fs.promises.mkdir(tempExtractPath, { recursive: true });
+
     await fs.createReadStream(zipPath)
       .pipe(unzipper.Extract({ path: tempExtractPath }))
       .promise();
@@ -258,17 +284,16 @@ async (Gifted, mek, m, { from, sender, isOwner, reply }) => {
           thumbnailUrl: "https://files.catbox.moe/a4hslq.jpg",
           mediaType: 1,
           renderLargerThumbnail: true,
-          sourceUrl: "https://github.com/Mayelprince/PRINCE-MDXIt"
+          sourceUrl: "https://github.com"
         }
       }
     }, { quoted: mek });
+
   } catch (err) {
     console.error('Update error:', err);
     reply("❌ *An error occurred while updating.*\n" + err.message);
   }
 });
-
-
 
 gmd({
   pattern: "restart",
