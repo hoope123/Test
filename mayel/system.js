@@ -184,31 +184,128 @@ ${readmore}
 });
 
 
+gmd({
+  pattern: "update",
+  desc: "Update bot from GitHub repo and restart",
+  react: "🔁",
+  category: "owner",
+  filename: __filename
+},
+async (Gifted, mek, m, { from, sender, isOwner, reply }) => {
+  if (!isOwner) {
+    return reply("⛔ *Access Denied*\nOnly the bot owner can run this command.");
+  }
+
+  try {
+    await Gifted.sendMessage(from, { text: '🔄 *Downloading update from GitHub...*' }, { quoted: mek });
+
+    const zipUrl = 'https://github.com/hoope123/Test/archive/refs/heads/main.zip';
+    const zipPath = path.join(process.cwd(), 'update.zip');
+    const tempExtractPath = path.join(process.cwd(), 'update_temp');
+
+    const downloadZip = () => new Promise((resolve, reject) => {
+      const file = fs.createWriteStream(zipPath);
+      https.get(zipUrl, (response) => {
+        response.pipe(file);
+        file.on('finish', () => file.close(resolve));
+      }).on('error', (err) => {
+        fs.unlink(zipPath, () => {});
+        reject(err);
+      });
+    });
+
+    await downloadZip();
+
+    await fs.promises.mkdir(tempExtractPath, { recursive: true });
+    await fs.createReadStream(zipPath)
+      .pipe(unzipper.Extract({ path: tempExtractPath }))
+      .promise();
+
+    const [extractedFolder] = fs.readdirSync(tempExtractPath).filter(f =>
+      fs.statSync(path.join(tempExtractPath, f)).isDirectory()
+    );
+    const extractedPath = path.join(tempExtractPath, extractedFolder);
+
+    const copyRecursive = (src, dest) => {
+      const entries = fs.readdirSync(src, { withFileTypes: true });
+      for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+        if (entry.isDirectory()) {
+          if (!fs.existsSync(destPath)) fs.mkdirSync(destPath);
+          copyRecursive(srcPath, destPath);
+        } else {
+          fs.copyFileSync(srcPath, destPath);
+        }
+      }
+    };
+
+    copyRecursive(extractedPath, process.cwd());
+
+    fs.rmSync(zipPath);
+    fs.rmSync(tempExtractPath, { recursive: true, force: true });
+
+    await Gifted.sendMessage(from, {
+      text: `✅ *Update completed successfully!*\nUse *restart* command to reload the bot.`,
+      contextInfo: {
+        forwardingScore: 999,
+        isForwarded: true,
+        externalAdReply: {
+          title: "Prince Bot",
+          body: "Update complete",
+          thumbnailUrl: "https://files.catbox.moe/a4hslq.jpg",
+          mediaType: 1,
+          renderLargerThumbnail: true,
+          sourceUrl: "https://github.com/Mayelprince/PRINCE-MDXIt"
+        }
+      }
+    }, { quoted: mek });
+  } catch (err) {
+    console.error('Update error:', err);
+    reply("❌ *An error occurred while updating.*\n" + err.message);
+  }
+});
+
 
 
 gmd({
-    pattern: "update",
-    desc: "Update bot from GitHub and restart.",
-    category: "owner",
-    react: "🔄",
-    filename: __filename
+  pattern: "restart",
+  desc: "Restart the Bot (PM2/Heroku compatible)",
+  category: "system",
+  filename: __filename
 },
 async (Gifted, mek, m, { from, isOwner, reply }) => {
-    if (!isOwner) return reply("*Owner Only Command*");
-    try {
-        await reply("🔄 Updating bot...\nPulling latest code from GitHub...");
-        await new Promise((resolve, reject) => {
-            exec("git pull https://github.com/hoope123/Test main", (err, stdout, stderr) => {
-                if (err) return reject(stderr || err);
-                resolve(stdout || "Update complete.");
-            });
+  try {
+    if (!isOwner) return reply("⛔ *Owner Only Command!*");
+
+    reply("♻️ *Restarting the bot...*");
+    await sleep(1500);
+
+    // Check if pm2 is installed
+    exec("pm2 -v", (err, stdout, stderr) => {
+      if (!err && stdout) {
+        // PM2 exists → restart using pm2
+        exec("pm2 restart all", (err2, out2) => {
+          if (err2) {
+            reply(`❌ PM2 restart failed:\n${err2.message}`);
+          }
         });
-        await reply("✅ Update complete! Restarting bot...");
-        setTimeout(() => process.exit(0), 1500);
-    } catch (e) {
-        reply("❌ Update failed: " + e);
-    }
+      } else {
+        // No PM2 → fallback to kill process (Heroku-style)
+        exec("kill 1", (err3, out3) => {
+          if (err3) {
+            reply(`❌ Fallback restart failed:\n${err3.message}`);
+          }
+        });
+      }
+    });
+  } catch (e) {
+    console.error("Restart error:", e);
+    reply("❌ An error occurred during restart:\n" + e.message);
+  }
 });
+
+
 /*
 gmd({
     pattern: "checkupdate",
@@ -260,23 +357,6 @@ async (Gifted, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, s
 });
 
 
-gmd({
-    pattern: "restart",
-    desc: "Restart the Bot",
-    category: "system",
-    filename: __filename
-},
-async(Gifted, mek, m,{from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply}) => {
-try{
-if (!isOwner) return reply("Owner Only Command!");
-reply("*Bot is Restarting...*")
-await sleep(1500)
-exec("pm2 restart all")
-}catch(e){
-console.log(e)
-reply(`${e}`)
-}
-})
 
 gmd({
     pattern: "reboot",
