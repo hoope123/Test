@@ -1,4 +1,5 @@
 const { File } = require("megajs");
+const https = require("https");
 const { exec } = require("child_process"),
    path = require("path"),
     fs = require("fs"),
