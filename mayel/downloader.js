@@ -41,7 +41,7 @@ async function formatVideo(buffer) {
   });
 }
 gmd({
-  pattern: "video",
+  pattern: "video2",
   alias: ["ytmp4", "videodl", "videodoc", "ytmp4doc", "ytmp4dl"],
   desc: "Download Youtube Videos(mp4)",
   category: "downloader",
