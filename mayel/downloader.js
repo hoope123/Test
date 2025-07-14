@@ -1,6 +1,7 @@
 const { gmd, config, commands, fetchJson, getBuffer, GiftedApkDl } = require('../gift'), 
       { PREFIX: prefix } = config, 
       axios = require('axios'),
+      fs = require('fs'),
       ffmpeg = require('fluent-ffmpeg'),
       GIFTED_DLS = require('gifted-dls'), 
       gifted = new GIFTED_DLS();
