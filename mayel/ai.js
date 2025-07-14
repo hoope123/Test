@@ -230,48 +230,58 @@ gmd({
         if (!q) return reply("Provide a prompt");
 
         let data;
-        try {
-            data = await fetchJson(`${global.api}/ai/gpt4?apikey=${global.myName}&q=${encodeURIComponent(q)}`);
-            if (data && data.result) {
-                return sendResponse(data.result);
+        const tryFetch = async (url) => {
+            try {
+                const res = await fetchJson(url);
+                if (res && res.result) return res.result;
+            } catch (err) {
+                console.log(`API failed or no valid response: ${url}`, err);
             }
-        } catch (e) {
-            console.log('Gemini API failed or no valid response:', e);
+            return null;
+        };
+
+        const urls = [
+            `${global.api}/ai/gpt4?apikey=${global.myName}&q=${encodeURIComponent(q)}`,
+            `${global.api}/ai/gpt4-o?apikey=${global.myName}&q=${encodeURIComponent(q)}`,
+            `${global.api}/ai/gpt-turbo?apikey=${global.myName}&q=${encodeURIComponent(q)}`
+        ];
+
+        let resultText = null;
+        for (const url of urls) {
+            resultText = await tryFetch(url);
+            if (resultText) break;
         }
-        try {
-            data = await fetchJson(`${global.api}/ai/gpt4-o?apikey=${global.myName}&q=${encodeURIComponent(q)}`);
-            if (data && data.result) {
-                return sendResponse(data.result);
-            }
-        } catch (e) {
-            console.log('GPT-4 API failed or no valid response:', e);
-        }
-        try {
-            data = await fetchJson(`${global.api}/ai/gpt-turbo?apikey=${global.myName}&q=${encodeURIComponent(q)}`);
-            if (data && data.result) {
-                return sendResponse(data.result);
-            }
-        } catch (e) {
-            console.log('Default GPT API failed or no valid response:', e);
-        }
-        return reply("Sorry, I couldn't generate a response. Please try again later.");
-        function sendResponse(resultText) {
-            const infoMess = {
-                text: resultText,
-                contextInfo: {
-                    mentionedJid: [m.sender],
-                    forwardingScore: 5,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363322606369079@newsletter',
-                        newsletterName: "PRINCE TECH",
-                        serverMessageId: 143
-                    }
+
+        if (!resultText) return reply("Sorry, I couldn't generate a response. Please try again later.");
+
+        const infoMess = {
+            text: resultText,
+            contextInfo: {
+                mentionedJid: [m.sender],
+                forwardingScore: 5,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: '120363322606369079@newsletter',
+                    newsletterName: "PRINCE TECH",
+                    serverMessageId: 143
                 }
-            };
-            Gifted.sendMessage(from, infoMess, { quoted: mek });
-            m.react('✅');
+            }
+        };
+
+        // Try sending with quoted, fallback to without quoted if it fails
+        try {
+            await Gifted.sendMessage(from, infoMess, { quoted: mek });
+        } catch (err) {
+            console.log("Send with quoted failed, retrying without quoted:", err);
+            try {
+                await Gifted.sendMessage(from, infoMess);
+            } catch (err2) {
+                console.log("Send without quoted also failed:", err2);
+                return reply("❌ Failed to send the AI response.");
+            }
         }
+        await m.react('✅');
+
     } catch (e) {
         console.log(e);
         reply(`${e.message || e}`);
