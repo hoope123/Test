@@ -1,13 +1,162 @@
 const { gmd, config, commands, fetchJson, getBuffer, GiftedApkDl } = require('../gift'), 
       { PREFIX: prefix } = config, 
       axios = require('axios'),
+      ffmpeg = require('fluent-ffmpeg'),
       GIFTED_DLS = require('gifted-dls'), 
       gifted = new GIFTED_DLS();
       yts = require('yt-search');
 
 
 
+async function formatVideo(buffer) {
+  return new Promise((resolve, reject) => {
+    const tempInput = `temp_${Date.now()}.input`;
+    const tempOutput = `temp_${Date.now()}.mp4`;
 
+    fs.writeFileSync(tempInput, buffer);
+
+    ffmpeg()
+      .input(tempInput)
+      .videoCodec('libx264')
+      .audioCodec('aac')
+      .outputOptions([
+        '-preset fast',
+        '-movflags faststart',
+        '-pix_fmt yuv420p'
+      ])
+      .size('640x?')
+      .toFormat('mp4')
+      .on('error', (err) => {
+        fs.unlinkSync(tempInput);
+        if (fs.existsSync(tempOutput)) fs.unlinkSync(tempOutput);
+        reject(err);
+      })
+      .on('end', () => {
+        const outputBuffer = fs.readFileSync(tempOutput);
+        fs.unlinkSync(tempInput);
+        fs.unlinkSync(tempOutput);
+        resolve(outputBuffer);
+      })
+      .save(tempOutput);
+  });
+}
+gmd({
+  pattern: "video",
+  alias: ["ytmp4", "videodl", "videodoc", "ytmp4doc", "ytmp4dl"],
+  desc: "Download Youtube Videos(mp4)",
+  category: "downloader",
+  react: "📽",
+  filename: __filename
+},
+async (Gifted, mek, m, { from, q, reply }) => {
+  try {
+    if (!q) {
+      return reply(`Please enter a search query or YouTube link. Usage example:\n*${prefix}video Spectre*`);
+    }
+
+    let downloadUrl;
+    let buffer;
+    let dataa;
+
+    const apiList = ["ytv", "ytmp4", "mp4", "ytvideo"];
+    const search = await fetchJson(`https://yts.giftedtech.web.id/?q=${encodeURIComponent(q)}`);
+    if (!search || !Array.isArray(search.videos) || search.videos.length === 0) {
+      return reply("❌ No results found.");
+    }
+
+    dataa = search.videos[0];
+    const videoUrl = dataa.url;
+
+    for (let endpoint of apiList) {
+      try {
+        const res = await fetchJson(`https://api.princetechn.com/api/download/${endpoint}?apikey=${global.myName}&url=${encodeURIComponent(videoUrl)}`);
+        if (res?.result?.download_url) {
+          downloadUrl = res.result.download_url;
+          break;
+        }
+      } catch (err) {
+        console.log(`[❌ ${endpoint} API failed]`, err.message);
+      }
+    }
+
+    if (!downloadUrl) return reply("❌ Failed to get video download URL.");
+
+    const rawBuffer = await getBuffer(downloadUrl);
+    buffer = await formatVideo(rawBuffer);
+
+    const infoMess = {
+      image: { url: dataa.thumbnail },
+      caption: `> *${config.BOT_NAME} 𝐕𝐈𝐃𝐄𝐎 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐄𝐑*  
+╭───────────────◆  
+│⿻ *Title:* ${dataa.title}
+│⿻ *Quality:* mp4
+│⿻ *Duration:* ${dataa.timestamp}
+│⿻ *Viewers:* ${dataa.views}
+│⿻ *Uploaded:* ${dataa.ago}
+│⿻ *Artist:* ${dataa.author.name}
+╰────────────────◆  
+⦿ *Direct Yt Link:* ${videoUrl}
+
+Reply With:
+*1* To Download Video 🎥
+*2* To Download Video Document 📄
+
+╭────────────────◆  
+│ ${global.footer}
+╰─────────────────◆`,
+      contextInfo: {
+        mentionedJid: [m.sender],
+        forwardingScore: 5,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: '120363322606369079@newsletter',
+          newsletterName: "PRINCE TECH",
+          serverMessageId: 143
+        }
+      }
+    };
+
+    const messageSent = await Gifted.sendMessage(from, infoMess, { quoted: mek });
+    const messageId = messageSent.key.id;
+
+    Gifted.ev.on("messages.upsert", async (event) => {
+      const msg = event.messages[0];
+      if (!msg?.message) return;
+
+      const content = msg.message.conversation || msg.message.extendedTextMessage?.text;
+      const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+      if (!isReply) return;
+
+      await m.react("⬇️");
+
+      switch (content.trim()) {
+        case "1":
+          await Gifted.sendMessage(from, {
+            video: buffer,
+            mimetype: "video/mp4"
+          }, { quoted: msg });
+          await m.react("✅");
+          break;
+
+        case "2":
+          await Gifted.sendMessage(from, {
+            document: buffer,
+            mimetype: "video/mp4",
+            fileName: `${dataa.title}.mp4`
+          }, { quoted: msg });
+          await m.react("✅");
+          break;
+
+        default:
+          await Gifted.sendMessage(from, { text: "Invalid option. Reply with 1 or 2." });
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Error in video command:", err);
+    reply("An error occurred. Please try again.");
+  }
+});
 
 gmd({
     pattern: "gitclone",
