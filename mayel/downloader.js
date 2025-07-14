@@ -8,7 +8,7 @@ const { gmd, config, commands, fetchJson, getBuffer, GiftedApkDl } = require('..
       yts = require('yt-search');
 
 
-
+/*
 async function formatVideo(buffer) {
   return new Promise((resolve, reject) => {
     const tempInput = `temp_${Date.now()}.input`;
@@ -159,6 +159,7 @@ Reply With:
   }
 });
 
+*/
 gmd({
     pattern: "gitclone",
     desc: "Clone/Download GitHub Repositories",
