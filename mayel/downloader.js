@@ -5,6 +5,115 @@ const { gmd, config, commands, fetchJson, getBuffer, GiftedApkDl } = require('..
       gifted = new GIFTED_DLS();
       yts = require('yt-search');
 
+
+gmd({
+    pattern: "video2",
+    alias: ["ytmp4", "videodl", "videodoc", "ytmp4doc", "ytmp4dl"],
+    desc: "Download YouTube Videos (mp4)",
+    category: "downloader",
+    react: "📽",
+    filename: __filename
+},
+async (Gifted, mek, m, { from, quoted, q, prefix, reply }) => {
+    try {
+        if (!q) return reply(`Please enter a search query or YouTube link. Example:\n${prefix}video https://youtu.be/abcd`);
+
+        let dataa, downloadUrl, buffer;
+        const isLink = q.startsWith("https://youtu");
+
+        if (isLink) {
+            try {
+                const down = await fetchJson(`${global.api}/download/ytv?apikey=${global.myName}&url=${encodeURIComponent(q)}`);
+                const search = await fetchJson(`${global.api}/search/yts?apikey=${global.myName}&query=${encodeURIComponent(q)}`);
+                downloadUrl = down.result.download_url;
+                dataa = search.results[0];
+            } catch {
+                const down = await fetchJson(`${global.api}/download/ytmp4?apikey=${global.myName}&url=${encodeURIComponent(q)}`);
+                const search = await fetchJson(`${global.api}/search/yts?apikey=${global.myName}&query=${encodeURIComponent(q)}`);
+                downloadUrl = down.result.download_url;
+                dataa = search.results[0];
+            }
+        } else {
+            const search = await yts(q);
+            dataa = search.videos[0];
+            const url = dataa.url;
+
+            try {
+                const down = await fetchJson(`${global.api}/download/ytv?apikey=${global.myName}&url=${encodeURIComponent(url)}`);
+                downloadUrl = down.result.download_url;
+            } catch {
+                const down = await fetchJson(`${global.api}/download/ytmp4?apikey=${global.myName}&url=${encodeURIComponent(url)}`);
+                downloadUrl = down.result.download_url;
+            }
+        }
+
+        buffer = await getBuffer(downloadUrl);
+
+        const infoMsg = {
+            image: { url: dataa.thumbnail },
+            caption: `> *${config.BOT_NAME} VIDEO DOWNLOADER*  
+╭─────◆  
+│⿻ *Title:* ${dataa.title}
+│⿻ *Quality:* mp4 (720p)
+│⿻ *Duration:* ${dataa.timestamp}
+│⿻ *Views:* ${dataa.views}
+│⿻ *Uploaded:* ${dataa.ago}
+│⿻ *Channel:* ${dataa.author.name}
+╰─────◆  
+⦿ *YT Link:* ${dataa.url}
+
+Reply with:
+*1* — Download as Streamable Video 🎥
+*2* — Download as Document 📄`,
+            contextInfo: {
+                mentionedJid: [m.sender]
+            }
+        };
+
+        const sentMsg = await Gifted.sendMessage(from, infoMsg, { quoted: mek });
+        const replyTo = sentMsg.key.id;
+
+        Gifted.ev.on("messages.upsert", async ({ messages }) => {
+            const rmsg = messages?.[0];
+            if (!rmsg?.message) return;
+
+            const msgText = rmsg.message.conversation || rmsg.message.extendedTextMessage?.text;
+            const replyId = rmsg.message.extendedTextMessage?.contextInfo?.stanzaId;
+            if (replyId !== replyTo) return;
+
+            await m.react("⬇️");
+
+            switch (msgText?.trim()) {
+                case "1":
+                    await Gifted.sendMessage(from, {
+                        video: buffer,
+                        mimetype: "video/mp4"
+                    }, { quoted: rmsg });
+                    await m.react("✅");
+                    break;
+
+                case "2":
+                    await Gifted.sendMessage(from, {
+                        document: buffer,
+                        mimetype: "video/mp4",
+                        fileName: `${dataa.title}.mp4`
+                    }, { quoted: rmsg });
+                    await m.react("✅");
+                    break;
+
+                default:
+                    await Gifted.sendMessage(from, { text: "❌ Invalid reply. Reply with 1 or 2." });
+            }
+        });
+
+    } catch (err) {
+        console.error("Error in video command:", err);
+        reply("❌ Failed to fetch video. Please check your link or try again.");
+    }
+});
+
+
+
 gmd({
     pattern: "gitclone",
     desc: "Clone/Download GitHub Repositories",
