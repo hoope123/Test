@@ -6,89 +6,105 @@ const { gmd, config, commands, fetchJson, getBuffer, GiftedApkDl } = require('..
       yts = require('yt-search');
 
 
+
+
 gmd({
     pattern: "video2",
     alias: ["ytmp4", "videodl", "videodoc", "ytmp4doc", "ytmp4dl"],
-    desc: "Download YouTube Videos (mp4)",
+    desc: "Download Youtube Videos(mp4)",
     category: "downloader",
     react: "📽",
     filename: __filename
 },
-async (Gifted, mek, m, { from, quoted, q, prefix, reply }) => {
+async (Gifted, mek, m, { from, q, prefix, reply }) => {
     try {
-        if (!q) return reply(`Please enter a search query or YouTube link. Example:\n${prefix}video https://youtu.be/abcd`);
+        if (!q) {
+            return reply(`Please enter a search query or YouTube link. Usage example:\n*${prefix}video Spectre*\n*${prefix}video https://youtu.be/example*`);
+        }
 
-        let dataa, downloadUrl, buffer;
-        const isLink = q.startsWith("https://youtu");
+        let downloadUrl;
+        let buffer;
+        let dataa;
 
-        if (isLink) {
+        const apiList = [
+            "ytv", "ytmp4", "mp4", "ytvideo"
+        ];
+
+        const search = await fetchJson(`https://yts.giftedtech.web.id/?q=${encodeURIComponent(q)}`);
+        if (!search || !Array.isArray(search.videos) || search.videos.length === 0) {
+            return reply("❌ No results found.");
+        }
+
+        dataa = search.videos[0];
+        const videoUrl = dataa.url;
+
+        for (let endpoint of apiList) {
             try {
-                const down = await fetchJson(`${global.api}/download/ytv?apikey=${global.myName}&url=${encodeURIComponent(q)}`);
-                const search = await fetchJson(`${global.api}/search/yts?apikey=${global.myName}&query=${encodeURIComponent(q)}`);
-                downloadUrl = down.result.download_url;
-                dataa = search.results[0];
-            } catch {
-                const down = await fetchJson(`${global.api}/download/ytmp4?apikey=${global.myName}&url=${encodeURIComponent(q)}`);
-                const search = await fetchJson(`${global.api}/search/yts?apikey=${global.myName}&query=${encodeURIComponent(q)}`);
-                downloadUrl = down.result.download_url;
-                dataa = search.results[0];
-            }
-        } else {
-            const search = await yts(q);
-            dataa = search.videos[0];
-            const url = dataa.url;
-
-            try {
-                const down = await fetchJson(`${global.api}/download/ytv?apikey=${global.myName}&url=${encodeURIComponent(url)}`);
-                downloadUrl = down.result.download_url;
-            } catch {
-                const down = await fetchJson(`${global.api}/download/ytmp4?apikey=${global.myName}&url=${encodeURIComponent(url)}`);
-                downloadUrl = down.result.download_url;
+                const res = await fetchJson(`https://api.giftedtech.web.id/api/download/${endpoint}?apikey=${global.myName}&url=${encodeURIComponent(videoUrl)}`);
+                if (res?.result?.download_url) {
+                    downloadUrl = res.result.download_url;
+                    break;
+                }
+            } catch (err) {
+                console.log(`[❌ ${endpoint} API failed]`, err.message);
             }
         }
 
+        if (!downloadUrl) return reply("❌ Failed to get video download URL.");
+
         buffer = await getBuffer(downloadUrl);
+        if (buffer instanceof Error) return reply("❌ Failed to fetch video buffer.");
 
-        const infoMsg = {
+        const infoMess = {
             image: { url: dataa.thumbnail },
-            caption: `> *${config.BOT_NAME} VIDEO DOWNLOADER*  
-╭─────◆  
+            caption: `> *${config.BOT_NAME} 𝐕𝐈𝐃𝐄𝐎 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐄𝐑*  
+╭───────────────◆  
 │⿻ *Title:* ${dataa.title}
-│⿻ *Quality:* mp4 (720p)
+│⿻ *Quality:* mp4
 │⿻ *Duration:* ${dataa.timestamp}
-│⿻ *Views:* ${dataa.views}
+│⿻ *Viewers:* ${dataa.views}
 │⿻ *Uploaded:* ${dataa.ago}
-│⿻ *Channel:* ${dataa.author.name}
-╰─────◆  
-⦿ *YT Link:* ${dataa.url}
+│⿻ *Artist:* ${dataa.author.name}
+╰────────────────◆  
+⦿ *Direct Yt Link:* ${videoUrl}
 
-Reply with:
-*1* — Download as Streamable Video 🎥
-*2* — Download as Document 📄`,
+Reply With:
+*1* To Download Video 🎥
+*2* To Download Video Document 📄
+
+╭────────────────◆  
+│ ${global.footer}
+╰─────────────────◆`,
             contextInfo: {
-                mentionedJid: [m.sender]
+                mentionedJid: [m.sender],
+                forwardingScore: 5,
+                isForwarded: true,
+                forwardedNewsletterMessageInfo: {
+                    newsletterJid: '120363322606369079@newsletter',
+                    newsletterName: "PRINCE TECH",
+                    serverMessageId: 143
+                }
             }
         };
 
-        const sentMsg = await Gifted.sendMessage(from, infoMsg, { quoted: mek });
-        const replyTo = sentMsg.key.id;
+        const messageSent = await Gifted.sendMessage(from, infoMess, { quoted: mek });
+        const messageId = messageSent.key.id;
 
-        Gifted.ev.on("messages.upsert", async ({ messages }) => {
-            const rmsg = messages?.[0];
-            if (!rmsg?.message) return;
-
-            const msgText = rmsg.message.conversation || rmsg.message.extendedTextMessage?.text;
-            const replyId = rmsg.message.extendedTextMessage?.contextInfo?.stanzaId;
-            if (replyId !== replyTo) return;
+        Gifted.ev.on("messages.upsert", async (event) => {
+            const msg = event.messages[0];
+            if (!msg?.message) return;
+            const content = msg.message.conversation || msg.message.extendedTextMessage?.text;
+            const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === messageId;
+            if (!isReply) return;
 
             await m.react("⬇️");
 
-            switch (msgText?.trim()) {
+            switch (content.trim()) {
                 case "1":
                     await Gifted.sendMessage(from, {
                         video: buffer,
                         mimetype: "video/mp4"
-                    }, { quoted: rmsg });
+                    }, { quoted: msg });
                     await m.react("✅");
                     break;
 
@@ -97,18 +113,18 @@ Reply with:
                         document: buffer,
                         mimetype: "video/mp4",
                         fileName: `${dataa.title}.mp4`
-                    }, { quoted: rmsg });
+                    }, { quoted: msg });
                     await m.react("✅");
                     break;
 
                 default:
-                    await Gifted.sendMessage(from, { text: "❌ Invalid reply. Reply with 1 or 2." });
+                    await Gifted.sendMessage(from, { text: "Invalid option. Reply with 1 or 2." });
             }
         });
 
     } catch (err) {
-        console.error("Error in video command:", err);
-        reply("❌ Failed to fetch video. Please check your link or try again.");
+        console.error("❌ Error in video command:", err);
+        reply("An unexpected error occurred. Try again later.");
     }
 });
 
