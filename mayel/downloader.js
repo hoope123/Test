@@ -40,7 +40,7 @@ async (Gifted, mek, m, { from, q, prefix, reply }) => {
 
         for (let endpoint of apiList) {
             try {
-                const res = await fetchJson(`https://api.giftedtech.web.id/api/download/${endpoint}?apikey=${global.myName}&url=${encodeURIComponent(videoUrl)}`);
+                const res = await fetchJson(`https://api.princetechn.com/api/download/${endpoint}?apikey=${global.myName}&url=${encodeURIComponent(videoUrl)}`);
                 if (res?.result?.download_url) {
                     downloadUrl = res.result.download_url;
                     break;
