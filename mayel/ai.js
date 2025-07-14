@@ -3,31 +3,48 @@ const { gmd, config, commands, fetchJson } = require('../gift'),
     fs = require('fs'), 
     axios = require('axios'); 
 
+// Helper function for robust sending
+async function robustSendMessage(Gifted, from, msg, quoted, reply) {
+    try {
+        await Gifted.sendMessage(from, msg, { quoted });
+    } catch (err) {
+        console.log("Send with quoted failed, retrying without quoted:", err);
+        try {
+            await Gifted.sendMessage(from, msg);
+        } catch (err2) {
+            console.log("Send without quoted also failed:", err2);
+            if (reply) return reply("❌ Failed to send the response.");
+        }
+    }
+}
+
+// --- IMAGE COMMANDS ---
+
 gmd({
     pattern: "sd",
     alias: ["stablediffusion"],
     react: '📸',
-    desc: "Generate Image Using Stable Difussion Ai.",
+    desc: "Generate Image Using Stable Diffusion Ai.",
     category: "ai",
     filename: __filename
 },
-async (Gifted, mek, m, { from, l, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+async (Gifted, mek, m, { from, quoted, q, reply }) => {
     try {
         if (!q) return reply("Provide a prompt to generate image!");
         const res = await axios.get(`${global.api}/ai/sd?apikey=${global.myName}&prompt=${encodeURIComponent(q)}`, {
             responseType: 'arraybuffer' 
         });
-        await Gifted.sendMessage(from, { 
+        const imageMsg = {
             image: Buffer.from(res.data),
             caption: `Here is your generated Image for ${q}\n> ${global.footer}`
-        }, { quoted: mek });
+        };
+        await robustSendMessage(Gifted, from, imageMsg, mek, reply);
         await m.react("✅");
     } catch (e) {
         console.error("Error occurred:", e);
         reply("❌ An error occurred while fetching data from Gifted-Api. Please try again later.");
     }
 });
-
 
 gmd({
     pattern: "imagine",
@@ -37,22 +54,43 @@ gmd({
     category: "ai",
     filename: __filename
 },
-async (Gifted, mek, m, { from, l, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+async (Gifted, mek, m, { from, quoted, q, reply }) => {
     try {
         if (!q) return reply("Provide a prompt to generate image!");
         const res = await axios.get(`${global.api}/ai/text2img?apikey=${global.myName}&prompt=${encodeURIComponent(q)}`, {
             responseType: 'arraybuffer' 
         });
-        await Gifted.sendMessage(from, { 
+        const imageMsg = {
             image: Buffer.from(res.data),
             caption: `Here is your generated Image for ${q}\n> ${global.footer}`
-        }, { quoted: mek });
+        };
+        await robustSendMessage(Gifted, from, imageMsg, mek, reply);
         await m.react("✅");
     } catch (e) {
         console.error("Error occurred:", e);
         reply("❌ An error occurred while fetching data from Gifted-Api. Please try again later.");
     }
 });
+
+// --- CHAT COMMANDS ---
+
+async function sendChatResponse(Gifted, from, mek, m, reply, resultText) {
+    const infoMess = {
+        text: resultText,
+        contextInfo: {
+            mentionedJid: [m.sender],
+            forwardingScore: 5,
+            isForwarded: true,
+            forwardedNewsletterMessageInfo: {
+                newsletterJid: '120363322606369079@newsletter',
+                newsletterName: "PRINCE TECH",
+                serverMessageId: 143
+            }
+        }
+    };
+    await robustSendMessage(Gifted, from, infoMess, mek, reply);
+    await m.react('✅');
+}
 
 gmd({
     pattern: "lumin",
@@ -62,25 +100,11 @@ gmd({
     category: "ai",
     filename: __filename
 },
-async (Gifted, mek, m, { from, l, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+async (Gifted, mek, m, { from, quoted, q, reply }) => {
     try {
         if (!q) return reply("Provide a query!");
         const data = await fetchJson(`${global.api}/ai/luminai?apikey=${global.myName}&query=${encodeURIComponent(q)}`);
-         const infoMess = {
-                text: data.result,
-                contextInfo: {
-                    mentionedJid: [m.sender],
-                    forwardingScore: 5,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363322606369079@newsletter',
-                        newsletterName: "PRINCE TECH",
-                        serverMessageId: 143
-                    }
-                }
-            };
-            Gifted.sendMessage(from, infoMess, { quoted: mek });
-        await m.react("✅");
+        await sendChatResponse(Gifted, from, mek, m, reply, data.result);
     } catch (e) {
         console.error("Error occurred:", e);
         reply("❌ An error occurred while fetching data from Gifted-Api. Please try again later.");
@@ -94,25 +118,11 @@ gmd({
     category: "ai",
     filename: __filename
 },
-async (Gifted, mek, m, { from, l, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+async (Gifted, mek, m, { from, quoted, q, reply }) => {
     try {
         if (!q) return reply("Provide a query!");
         const data = await fetchJson(`${global.api}/ai/wwdgpt?apikey=${global.myName}&prompt=${encodeURIComponent(q)}`);
-         const infoMess = {
-                text: data.result,
-                contextInfo: {
-                    mentionedJid: [m.sender],
-                    forwardingScore: 5,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363322606369079@newsletter',
-                        newsletterName: "PRINCE TECH",
-                        serverMessageId: 143
-                    }
-                }
-            };
-            Gifted.sendMessage(from, infoMess, { quoted: mek });
-        await m.react("✅");
+        await sendChatResponse(Gifted, from, mek, m, reply, data.result);
     } catch (e) {
         console.error("Error occurred:", e);
         reply("❌ An error occurred while fetching data from Gifted-Api. Please try again later.");
@@ -127,25 +137,11 @@ gmd({
     category: "ai",
     filename: __filename
 },
-async (Gifted, mek, m, { from, l, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+async (Gifted, mek, m, { from, quoted, q, reply }) => {
     try {
         if (!q) return reply("Provide a query!");
         const data = await fetchJson(`${global.api}/ai/letmegpt?apikey=${global.myName}&query=${encodeURIComponent(q)}`);
-         const infoMess = {
-                text: data.result,
-                contextInfo: {
-                    mentionedJid: [m.sender],
-                    forwardingScore: 5,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363322606369079@newsletter',
-                        newsletterName: "PRINCE TECH",
-                        serverMessageId: 143
-                    }
-                }
-            };
-            Gifted.sendMessage(from, infoMess, { quoted: mek });
-        await m.react("✅");
+        await sendChatResponse(Gifted, from, mek, m, reply, data.result);
     } catch (e) {
         console.error("Error occurred:", e);
         reply("❌ An error occurred while fetching data from Gifted-Api. Please try again later.");
@@ -160,25 +156,11 @@ gmd({
     category: "ai",
     filename: __filename
 },
-async (Gifted, mek, m, { from, l, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+async (Gifted, mek, m, { from, quoted, q, reply }) => {
     try {
         if (!q) return reply("Provide a query!");
         const data = await fetchJson(`${global.api}/ai/simsimi?apikey=${global.myName}&query=${encodeURIComponent(q)}`);
-         const infoMess = {
-                text: data.result,
-                contextInfo: {
-                    mentionedJid: [m.sender],
-                    forwardingScore: 5,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363322606369079@newsletter',
-                        newsletterName: "PRINCE TECH",
-                        serverMessageId: 143
-                    }
-                }
-            };
-            Gifted.sendMessage(from, infoMess, { quoted: mek });
-        await m.react("✅");
+        await sendChatResponse(Gifted, from, mek, m, reply, data.result);
     } catch (e) {
         console.error("Error occurred:", e);
         reply("❌ An error occurred while fetching data from Gifted-Api. Please try again later.");
@@ -192,31 +174,16 @@ gmd({
     category: "ai",
     filename: __filename
 },
-async (Gifted, mek, m, { from, l, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+async (Gifted, mek, m, { from, quoted, q, reply }) => {
     try {
         if (!q) return reply("Provide a query!");
         const data = await fetchJson(`${global.api}/ai/gpt4-o?apikey=${global.myName}&q=${encodeURIComponent(q)}`);
-         const infoMess = {
-                text: data.result,
-                contextInfo: {
-                    mentionedJid: [m.sender],
-                    forwardingScore: 5,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-newsletterJid: '120363322606369079@newsletter',
-                        newsletterName: "PRINCE TECH",
-                        serverMessageId: 143
-                    }
-                }
-            };
-            Gifted.sendMessage(from, infoMess, { quoted: mek });
-        await m.react("✅");
+        await sendChatResponse(Gifted, from, mek, m, reply, data.result);
     } catch (e) {
         console.error("Error occurred:", e);
         reply("❌ An error occurred while fetching data from Gifted-Api. Please try again later.");
     }
 });
-
 
 gmd({
     pattern: "ai",
@@ -225,11 +192,10 @@ gmd({
     react: "🤖",
     category: "ai",
     filename: __filename
-}, async (Gifted, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+}, async (Gifted, mek, m, { from, quoted, q, reply }) => {
     try {
         if (!q) return reply("Provide a prompt");
 
-        let data;
         const tryFetch = async (url) => {
             try {
                 const res = await fetchJson(url);
@@ -253,34 +219,7 @@ gmd({
         }
 
         if (!resultText) return reply("Sorry, I couldn't generate a response. Please try again later.");
-
-        const infoMess = {
-            text: resultText,
-            contextInfo: {
-                mentionedJid: [m.sender],
-                forwardingScore: 5,
-                isForwarded: true,
-                forwardedNewsletterMessageInfo: {
-                    newsletterJid: '120363322606369079@newsletter',
-                    newsletterName: "PRINCE TECH",
-                    serverMessageId: 143
-                }
-            }
-        };
-
-        // Try sending with quoted, fallback to without quoted if it fails
-        try {
-            await Gifted.sendMessage(from, infoMess, { quoted: mek });
-        } catch (err) {
-            console.log("Send with quoted failed, retrying without quoted:", err);
-            try {
-                await Gifted.sendMessage(from, infoMess);
-            } catch (err2) {
-                console.log("Send without quoted also failed:", err2);
-                return reply("❌ Failed to send the AI response.");
-            }
-        }
-        await m.react('✅');
+        await sendChatResponse(Gifted, from, mek, m, reply, resultText);
 
     } catch (e) {
         console.log(e);
@@ -296,30 +235,16 @@ gmd({
     category: "ai",
     filename: __filename
 },
-async(Gifted, mek, m,{from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply}) => {
-try{
-if (!q) return reply("Provide a prompt")
-let data = await fetchJson(`${global.api}/ai/geminiai?apikey=${global.myName}&q=${encodeURIComponent(q)}`)
-    const infoMess = {
-        text: data.result,
-        contextInfo: {
-          mentionedJid: [m.sender],
-          forwardingScore: 5,
-          isForwarded: true,
-          forwardedNewsletterMessageInfo: {
-            newsletterJid: '120363322606369079@newsletter',
-                        newsletterName: "PRINCE TECH",
-            serverMessageId: 143
-          }
-        }
-      };
-      await Gifted.sendMessage(from, infoMess, { quoted: mek });
-      await m.react('✅');
-}catch(e){
-console.log(e)
-reply(`${e}`)
-}
-})
+async(Gifted, mek, m, {from, quoted, q, reply}) => {
+    try {
+        if (!q) return reply("Provide a prompt");
+        let data = await fetchJson(`${global.api}/ai/geminiai?apikey=${global.myName}&q=${encodeURIComponent(q)}`);
+        await sendChatResponse(Gifted, from, mek, m, reply, data.result);
+    } catch(e) {
+        console.log(e);
+        reply(`${e}`);
+    }
+});
 
 gmd({
     pattern: "blackbox",
@@ -329,27 +254,13 @@ gmd({
     category: "ai",
     filename: __filename
 },
-async(Gifted, mek, m,{from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply}) => {
+async(Gifted, mek, m, {from, quoted, q, reply}) => {
     try {
         let data = await fetchJson(`${global.api}/ai/blackbox?apikey=${global.myName}&q=${encodeURIComponent(q)}`);
         if (!data || !data.result) return reply("Error: No response from the AI.");
         if (data && data.result && !data.result.includes("Generated by BLACKBOX.AI, try unlimited chat https://www.blackbox.ai")) {
-        const infoMess = {
-            text: data.result,
-            contextInfo: {
-                mentionedJid: [m.sender],
-                forwardingScore: 5,
-                isForwarded: true,
-                forwardedNewsletterMessageInfo: {
-                    newsletterJid: '120363322606369079@newsletter',
-                        newsletterName: "PRINCE TECH",
-                    serverMessageId: 143
-                }
-            }
-        };
-        await Gifted.sendMessage(from, infoMess, { quoted: mek });
-        await m.react('✅');
-    }
+            await sendChatResponse(Gifted, from, mek, m, reply, data.result);
+        }
     } catch (e) {
         console.log(e);
         reply(`${e.message || e}`);
@@ -363,67 +274,36 @@ gmd({
     react: "🤖",
     category: "ai",
     filename: __filename
-}, async (Gifted, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+}, async (Gifted, mek, m, { from, quoted, q, reply }) => {
     try {
         let data;
-        try {
-            data = await fetchJson(`${global.api}/ai/gpt4?apikey=${global.myName}&q=${encodeURIComponent(q)}`);
-            if (data && data.result) {
-                return sendResponse(data.result);
+        const tryFetch = async (url) => {
+            try {
+                const res = await fetchJson(url);
+                if (res && res.result) return res.result;
+            } catch (err) {
+                console.log(`API failed or no valid response: ${url}`, err);
             }
-        } catch (e) {
-            console.log('Gemini API failed or no valid response:', e);
+            return null;
+        };
+
+        const urls = [
+            `${global.api}/ai/gpt4?apikey=${global.myName}&q=${encodeURIComponent(q)}`,
+            `${global.api}/ai/gpt4-o?apikey=${global.myName}&q=${encodeURIComponent(q)}`,
+            `${global.api}/ai/gpt?apikey=${global.myName}&q=${encodeURIComponent(q)}`,
+            `${global.api}/ai/gpt-turbo?apikey=${global.myName}&q=${encodeURIComponent(q)}`,
+            `${global.api}/ai/geminiai?apikey=${global.myName}&q=${encodeURIComponent(q)}`
+        ];
+
+        let resultText = null;
+        for (const url of urls) {
+            resultText = await tryFetch(url);
+            if (resultText) break;
         }
-        try {
-            data = await fetchJson(`${global.api}/ai/gpt4-o?apikey=${global.myName}&q=${encodeURIComponent(q)}`);
-            if (data && data.result) {
-                return sendResponse(data.result);
-            }
-        } catch (e) {
-            console.log('Gemini API failed or no valid response:', e);
-        }
-        try {
-            data = await fetchJson(`${global.api}/ai/gpt?apikey=${global.myName}&q=${encodeURIComponent(q)}`);
-            if (data && data.result) {
-                return sendResponse(data.result);
-            }
-        } catch (e) {
-            console.log('BlackBox API failed or no valid response:', e);
-        }
-        try {
-            data = await fetchJson(`${global.api}/ai/gpt-turbo?apikey=${global.myName}&q=${encodeURIComponent(q)}`);
-            if (data && data.result) {
-                return sendResponse(data.result);
-            }
-        } catch (e) {
-            console.log('GPT-3 Turbo API failed or no valid response:', e);
-        }
-        try {
-            data = await fetchJson(`${global.api}/ai/geminiai?apikey=${global.myName}&q=${encodeURIComponent(q)}`);
-            if (data && data.result) {
-                return sendResponse(data.result);
-            }
-        } catch (e) {
-            console.log('Default GPT API failed or no valid response:', e);
-        }
-        return reply("Sorry, I couldn't generate a response. Please try again later.");
-        function sendResponse(resultText) {
-            const infoMess = {
-                text: resultText,
-                contextInfo: {
-                    mentionedJid: [m.sender],
-                    forwardingScore: 5,
-                    isForwarded: true,
-                    forwardedNewsletterMessageInfo: {
-                        newsletterJid: '120363322606369079@newsletter',
-                        newsletterName: "PRINCE TECH",
-                        serverMessageId: 143
-                    }
-                }
-            };
-            Gifted.sendMessage(from, infoMess, { quoted: mek });
-            m.react('✅');
-        }
+
+        if (!resultText) return reply("Sorry, I couldn't generate a response. Please try again later.");
+        await sendChatResponse(Gifted, from, mek, m, reply, resultText);
+
     } catch (e) {
         console.log(e);
         reply(`${e.message || e}`);
