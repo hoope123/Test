@@ -297,16 +297,23 @@ We’ll miss you 😢
    }
 });  
     
-Gifted.ev.on('messages.upsert', async(mek) => {
-mek = mek.messages[0];
-saveMessage(JSON.parse(JSON.stringify(mek, null, 2)))
-const fromJid = mek.key.participant || mek.key.remoteJid;
+Gifted.ev.on('messages.upsert', async (mek) => {
+    if (!mek.messages || mek.messages.length === 0) return;
 
-if (!mek || !mek.message) return;
+    let msg = mek.messages[0];
+    if (!msg || !msg.message) return;
 
-mek.message = (getContentType(mek.message) === 'ephemeralMessage') 
-    ? mek.message.ephemeralMessage.message 
-    : mek.message;
+    // ✅ Unwrap ephemeral messages before saving
+    const contentType = getContentType(msg.message);
+    if (contentType === 'ephemeralMessage') {
+        msg.message = msg.message.ephemeralMessage.message;
+    }
+
+    // ✅ Save cleaned message
+    saveMessage(msg);
+
+    // ✅ Optional: Read status updates
+    const fromJid = msg.key.participant || msg.key.remoteJid;
  
 if (mek.key && isJidBroadcast(mek.key.remoteJid)) {
     try {
