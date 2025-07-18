@@ -1,7 +1,7 @@
 
 const { isJidGroup, isJidBroadcast, getContentType, jidNormalizedUser } = require('@whiskeysockets/baileys');
 const config = require('../set');
-const { loadMessage } = require('./princedatabase');
+const { loadMessage } = require('./gmddatabase');
 const { ANTI_DELETE, TIME_ZONE } = config;
 
 const formatTime = (timestamp) => {
