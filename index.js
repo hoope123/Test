@@ -312,9 +312,10 @@ Gifted.ev.on('messages.upsert', async (mek) => {
     // ✅ Save cleaned message
     saveMessage(msg);
 
-    // ✅ Optional: Read status updates
     const fromJid = msg.key.participant || msg.key.remoteJid;
- 
+
+    
+
 if (mek.key && isJidBroadcast(mek.key.remoteJid)) {
     try {
  
