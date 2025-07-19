@@ -6,7 +6,7 @@ const DB_PATH = path.resolve(__dirname, 'messages.json');
 // Initialize the database file if it doesn't exist
 if (!fs.existsSync(DB_PATH)) {
   fs.writeFileSync(DB_PATH, JSON.stringify([]));
-  console.log('🆕 messages.json file created.');
+  // console.log('🆕 messages.json file created.');
 }
 
 /**
@@ -19,20 +19,15 @@ function saveMessage(message) {
     const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
     const messageId = message.key?.id;
 
-    if (!messageId) {
-      console.warn('⚠️ Message does not have a key.id:', message);
-      return false;
-    }
+    if (!messageId) return false;
 
     // Prevent duplicate IDs
     if (data.some((msg) => msg.key?.id === messageId)) {
-      console.log(`⚠️ Message ${messageId} already exists in messages.json. Skipping save.`);
       return false;
     }
 
     data.push(message);
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
-    console.log(`✅ Message ${messageId} saved successfully.`);
     return true;
   } catch (err) {
     console.error('❌ Error saving message to messages.json:', err.message);
@@ -49,20 +44,10 @@ function loadMessage(id) {
   try {
     const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
 
-    if (!id) {
-      console.warn("⚠️ loadMessage called with undefined/null ID.");
-      return null;
-    }
+    if (!id) return null;
 
     const msg = data.find((msg) => msg.key?.id === id);
-
-    if (!msg) {
-      console.warn(`⚠️ No message found for ID: ${id}`);
-      return null;
-    }
-
-    console.log(`🔍 Message loaded for ID: ${id}`);
-    return msg;
+    return msg || null;
   } catch (err) {
     console.error(`❌ Error loading message from messages.json for ID ${id}:`, err.message);
     return null;
