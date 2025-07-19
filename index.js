@@ -192,7 +192,10 @@ Gifted.ev.on('creds.update', saveCreds)
                 }
             });
         }
-    
+
+      Gifted.ev.on("messages.update", async (updates) => {
+  await GiftedAntidelete(updates, Gifted)
+})
 Gifted.ev.on("call", async (json) => {
   await GiftedAnticall(json, Gifted);
 });
