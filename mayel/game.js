@@ -369,196 +369,77 @@ const tictactoeManager = new TicTacToeManager();
 // Start Game
 
 
+// Fixed TicTacToe Game Handler and Manager const { gmd } = require('../lib'); const tictactoeManager = require('../lib/tictactoemanager');
 
-gmd({
-  pattern: "ttt",
-  desc: "Start a TicTacToe game with another user",
-  category: "games",
-  filename: __filename
-}, async (Gifted, mek, m, { sender, isGroup, quoted, reply, from }) => {
-  try {
-    // Check if user replied to someone
-    if (!quoted || !quoted.sender) {
-      return reply("❗Please *reply to someone's message* to challenge them to a game.");
-    }
+// Normalize JID to avoid mismatch issues 
+function normalizeJid(jid) { return jid?.split(':')[0]?.replace(/[^0-9]/g, '') + '@s.whatsapp.net'; }
 
-    // Prevent playing with self
-    if (quoted.sender === sender) {
-      return reply("🤨 You cannot play with yourself!");
-    }
+// Start Game Command 
+gmd({ pattern: "ttt", desc: "Start a TicTacToe game with another user", category: "games", filename: __filename }, async (Gifted, mek, m, { sender, isGroup, quoted, reply, from }) => { try { if (!isGroup) return reply("TicTacToe is only available in groups!");
 
-    // Create game via manager
-    const result = tictactoeManager.createGame(from, sender, quoted.sender);
-    if (!result.success) return reply(result.message);
+if (!quoted || !quoted.sender) return reply("Reply to someone's message to start a game with them.");
 
-    const board = tictactoeManager.formatBoard(result.gameState.board);
+const player1 = normalizeJid(sender);
+const player2 = normalizeJid(quoted.sender);
 
+if (player1 === player2) return reply("You cannot play with yourself.");
+
+const result = tictactoeManager.createGame(from, player1, player2);
+if (!result.success) return reply(result.message);
+
+const formattedBoard = tictactoeManager.formatBoard(result.gameState.board);
+
+await Gifted.sendMessage(from, {
+  text: `🎮 *TIC-TAC-TOE* 🎮\n\n${result.message}\n\n${formattedBoard}\n\n@${result.gameState.currentPlayer.split('@')[0]}'s turn (❌)\n\nTo make a move, send a number (1-9).`,
+  mentions: result.gameState.players
+});
+
+} catch (e) { console.error("TicTacToe Start Error:", e); reply("❌ Error starting the game. Try again."); } });
+
+// End Game Command
+gmd({ pattern: "ttend", desc: "End your current TicTacToe game", category: "games", filename: __filename }, async (Gifted, mek, m, { sender, from, reply }) => { try { const player = normalizeJid(sender); const result = tictactoeManager.endGame(from, player); if (!result.success) return reply(result.message);
+
+await Gifted.sendMessage(from, {
+  text: result.message,
+  mentions: [player, result.opponent]
+});
+
+} catch (e) { console.error("TicTacToe End Error:", e); reply("❌ Error ending the game."); } });
+
+// Handle Move (1-9)
+gmd({ on: "body" }, async (Gifted, mek, m, { sender, from, body }) => { try { if (!/^[1-9]$/.test(body.trim())) return; const position = parseInt(body.trim()) - 1;
+
+const player = normalizeJid(sender);
+const gameInfo = tictactoeManager.getGameState(from, player);
+if (!gameInfo) return;
+
+const moveResult = tictactoeManager.makeMove(from, player, position);
+if (!moveResult.success) return Gifted.sendMessage(from, { text: moveResult.message });
+
+const formattedBoard = tictactoeManager.formatBoard(moveResult.board);
+
+if (moveResult.result) {
+  if (moveResult.result.status === 'win') {
     await Gifted.sendMessage(from, {
-      text: `🎮 *TIC-TAC-TOE* 🎮\n\n${result.message}\n\n${board}\n\n@${result.gameState.currentPlayer.split('@')[0]}'s turn (❌)\n\nTo make a move, send a number (1-9).`,
-      mentions: [sender, quoted.sender]
+      text: `🎉 @${player.split('@')[0]} (${moveResult.result.symbol}) has won the game! 🎉`,
+      mentions: [player, ...gameInfo.gameState.players.filter(p => p !== player)]
     });
-
-  } catch (e) {
-    console.error("TicTacToe Start Error:", e);
-    reply("❌ Error starting the game. Make sure you replied to a user's message.");
-  }
-});
-
-// End Game
-
-gmd({
-  pattern: "ttend",
-  desc: "End your current TicTacToe game",
-  category: "games",
-  filename: __filename
-}, async (Gifted, mek, m, { sender, from, reply }) => {
-  try {
-    const result = tictactoeManager.endGame(from, sender);
-    if (!result.success) return reply(result.message);
-
-    // Defensive check for opponent presence
-    const mentions = [sender];
-    if (result.opponent) mentions.push(result.opponent);
-
+  } else if (moveResult.result.status === 'draw') {
     await Gifted.sendMessage(from, {
-      text: result.message,
-      mentions
+      text: `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n🤝 The game ended in a draw! 🤝`,
+      mentions: gameInfo.gameState.players
     });
-
-  } catch (e) {
-    console.error("TicTacToe End Error:", e);
-    reply("❌ Error ending the game. Please try again.");
   }
-});
+} else {
+  const nextPlayerSymbol = gameInfo.gameState.symbols[moveResult.nextPlayer];
+  await Gifted.sendMessage(from, {
+    text: `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n@${moveResult.nextPlayer.split('@')[0]}'s turn (${nextPlayerSymbol})`,
+    mentions: [moveResult.nextPlayer]
+  });
+}
 
-// Handle move inputs 1-9
-gmd({
-  on: "body"
-}, async (Gifted, mek, m, { sender, from, body }) => {
-  try {
-    if (!/^[1-9]$/.test(body.trim())) return;
-    const position = parseInt(body.trim()) - 1;
+} catch (e) { console.error("TicTacToe Move Error:", e); } });
 
-    const gameInfo = tictactoeManager.getGameState(from, sender);
-    if (!gameInfo) return;
-
-    const moveResult = tictactoeManager.makeMove(from, sender, position);
-    if (!moveResult.success) {
-      return Gifted.sendMessage(from, { text: moveResult.message });
-    }
-
-    const formattedBoard = tictactoeManager.formatBoard(moveResult.board);
-
-    // Game result check
-    if (moveResult.result) {
-      const opponent = gameInfo.gameState.players.find(p => p !== sender);
-      if (moveResult.result.status === 'win') {
-        return await Gifted.sendMessage(from, {
-          text: `🎉 @${sender.split('@')[0]} (${moveResult.result.symbol}) has *won* the game! 🎉\n\n${formattedBoard}`,
-          mentions: [sender, opponent]
-        });
-      } else if (moveResult.result.status === 'draw') {
-        return await Gifted.sendMessage(from, {
-          text: `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n🤝 The game ended in a *draw*! 🤝`,
-          mentions: gameInfo.gameState.players
-        });
-      }
-    }
-
-    // Ongoing game — next turn
-    const next = moveResult.nextPlayer;
-    const nextSymbol = gameInfo.gameState.symbols[next];
-    await Gifted.sendMessage(from, {
-      text: `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n@${next.split('@')[0]}'s turn (${nextSymbol})`,
-      mentions: [next]
-    });
-
-  } catch (e) {
-    console.error("TicTacToe Move Error:", e);
-  }
-});
-//coded by prince tech x gifted 
-
-
-
-
-gmd({
-  pattern: "trivia",
-  react: '🧠',
-  desc: "Start a Trivia Quiz",
-  category: "games",
-  filename: __filename
-},
-async (Gifted, mek, m, { from, reply, sender }) => {
-  if (activeTrivia[from]) {
-    return reply("❗A trivia is already in progress. Please answer it or wait 30s.");
-  }
-
-  try {
-    const res = await fetchJson("https://opentdb.com/api.php?amount=1&type=multiple");
-    const quiz = res.results[0];
-    const correct = quiz.correct_answer;
-    const options = [...quiz.incorrect_answers, correct].sort(() => Math.random() - 0.5);
-
-    activeTrivia[from] = {
-      question: quiz.question,
-      correct,
-      options,
-      user: sender,
-      timestamp: Date.now()
-    };
-
-    const optionText = options.map((opt, i) => `${i + 1}. ${opt}`).join("\n");
-
-    await Gifted.sendMessage(from, {
-      text: `🧠 *Trivia Quiz!*\n\n*${quiz.question}*\n\n${optionText}\n\n_Reply with the option number or correct answer text_`,
-    }, { quoted: mek });
-
-    // Timeout after 30 seconds
-    setTimeout(() => {
-      if (activeTrivia[from] && Date.now() - activeTrivia[from].timestamp >= 30000) {
-        Gifted.sendMessage(from, {
-          text: `⏰ Time's up! The correct answer was: *${activeTrivia[from].correct}*`
-        });
-        delete activeTrivia[from];
-      }
-    }, 30000);
-  } catch (e) {
-    console.error(e);
-    reply("❌ Failed to fetch trivia question.");
-  }
-});
-
-gmd({
-  on: "body"
-},
-async (Gifted, mek, m, { from, body, pushname, sender }) => {
-  const session = activeTrivia[from];
-  if (!session || session.user !== sender) return;
-
-  const input = body.trim().toLowerCase();
-  const correctText = session.correct.toLowerCase();
-
-  let selectedAnswer = input;
-
-  // If user replied with a number (e.g. 1, 2, 3, 4)
-  if (/^[1-4]$/.test(input)) {
-    const index = parseInt(input) - 1;
-    selectedAnswer = session.options[index]?.toLowerCase() || "";
-  }
-
-  if (selectedAnswer === correctText) {
-    await Gifted.sendMessage(from, {
-      text: `✅ Correct, *${pushname}*! The answer was *${session.correct}*`
-    }, { quoted: mek });
-  } else {
-    await Gifted.sendMessage(from, {
-      text: `❌ Wrong answer!\n✅ The correct answer is: *${session.correct}*`
-    }, { quoted: mek });
-  }
-
-  delete activeTrivia[from];
-});
 
 
 
