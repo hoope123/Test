@@ -2,77 +2,45 @@ const fs = require('fs');
 const path = require('path');
 
 const DB_PATH = path.resolve(__dirname, 'messages.json');
-const MAX_MESSAGES = 2000;
-const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-// Ensure DB file exists
+// Initialize the database file if it doesn't exist
 if (!fs.existsSync(DB_PATH)) {
   fs.writeFileSync(DB_PATH, JSON.stringify([]));
 }
 
 /**
- * Internal function: safely load JSON DB
- */
-function loadDB() {
-  try {
-    const raw = fs.readFileSync(DB_PATH, 'utf-8');
-    return JSON.parse(raw);
-  } catch (err) {
-    console.error("❌ messages.json is corrupted. Resetting DB:", err.message);
-    fs.writeFileSync(DB_PATH, JSON.stringify([]));
-    return [];
-  }
-}
-
-/**
- * Save a message with timestamp, deduplication, and cleanup
+ * Save a message to the database.
+ * @param {Object} message - The message object to save.
+ * @returns {boolean} - True if saved successfully, false otherwise.
  */
 function saveMessage(message) {
   try {
-    const id = message.key?.id;
-    if (!id) return false;
+    const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
+    const messageId = message.key?.id;
 
-    const db = loadDB();
+    // Prevent duplicate IDs
+    if (data.some((msg) => msg.key?.id === messageId)) return false;
 
-    // Prevent duplicates
-    if (db.some(msg => msg.key?.id === id)) {
-      console.log(`⚠️ Message ${id} already exists. Skipping.`);
-      return false;
-    }
-
-    // Add timestamp
-    message.__savedAt = Date.now();
-    db.push(message);
-
-    // Cleanup old or too many
-    const now = Date.now();
-    const cleaned = db
-      .filter(msg => now - (msg.__savedAt || 0) < MAX_AGE_MS)
-      .slice(-MAX_MESSAGES);
-
-    fs.writeFileSync(DB_PATH, JSON.stringify(cleaned, null, 2));
-    console.log(`✅ Saved message ${id}`);
+    data.push(message);
+    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
     return true;
   } catch (err) {
-    console.error('❌ Error saving message:', err);
+    console.error('Error saving message:', err);
     return false;
   }
 }
 
 /**
- * Load a message by ID
+ * Load a message by its ID.
+ * @param {string} id - Unique message ID.
+ * @returns {Object|null} - The message object or null if not found.
  */
 function loadMessage(id) {
   try {
-    const db = loadDB();
-    const msg = db.find(m => m.key?.id === id);
-    if (!msg) {
-      console.warn("⚠️ Message not found for ID:", id);
-      return null;
-    }
-    return msg;
+    const data = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
+    return data.find((msg) => msg.key?.id === id) || null;
   } catch (err) {
-    console.error('❌ Error loading message:', err);
+    console.error('Error loading message:', err);
     return null;
   }
 }
