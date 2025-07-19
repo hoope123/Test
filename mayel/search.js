@@ -1,3 +1,4 @@
+const { generateWAMessageContent, generateWAMessageFromContent } = require('@whiskeysockets/baileys');
 const { gmd, config, fetchJson } = require('../gift'), 
       { PREFIX: prefix } = config, 
       axios = require('axios'), 
@@ -171,6 +172,105 @@ gmd({
     } catch (e) {
         console.error(e);
         reply(`Error: ${e.message}`);
+    }
+});
+
+gmd({
+    pattern: "img2",
+    alias: ["image2", "gimage2", "googleimage2"],
+    desc: "Search for Images from Google.",
+    react: "🖼️",
+    category: "search",
+    filename: __filename
+}, async (Gifted, mek, m, { from, quoted, args, q, reply }) => {
+    try {
+        if (!q) return reply("Please provide a search query.");
+
+        const apiUrl = `${global.api}/search/googleimage?apikey=${global.myName}&query=${encodeURIComponent(q)}`;
+        const response = await axios.get(apiUrl);
+        const results = response.data.results;
+
+        if (!results || results.length === 0) {
+            return reply("No images found for your search.");
+        }
+
+        const images = results.slice(0, 6); // limit to 6 for WhatsApp carousel
+        const picked = [];
+
+        for (const url of images) {
+            try {
+                const imgRes = await axios.get(url, { responseType: 'arraybuffer' });
+                if (imgRes.status === 200) {
+                    picked.push({
+                        buffer: Buffer.from(imgRes.data),
+                        directLink: url
+                    });
+                }
+            } catch (e) {
+                console.log(`Failed to fetch image: ${url}`);
+            }
+        }
+
+        if (picked.length === 0) return reply("All image downloads failed.");
+
+        const carouselCards = await Promise.all(
+            picked.map(async (item, index) => ({
+                header: {
+                    title: `🖼️ Image ${index + 1}`,
+                    hasMediaAttachment: true,
+                    imageMessage: (await generateWAMessageContent({
+                        image: item.buffer
+                    }, {
+                        upload: Gifted.waUploadToServer
+                    })).imageMessage
+                },
+                body: {
+                    text: `Search: ${q}`
+                },
+                footer: {
+                    text: "🔁 Swipe to see more"
+                },
+                nativeFlowMessage: {
+                    buttons: [
+                        {
+                            name: 'cta_url',
+                            buttonParamsJson: JSON.stringify({
+                                display_text: "🌐 View Image",
+                                url: item.directLink
+                            })
+                        }
+                    ]
+                }
+            }))
+        );
+
+        const carouselMessage = generateWAMessageFromContent(from, {
+            viewOnceMessage: {
+                message: {
+                    messageContextInfo: {
+                        deviceListMetadata: {},
+                        deviceListMetadataVersion: 2
+                    },
+                    interactiveMessage: {
+                        body: { text: `🔍 Results for: ${q}` },
+                        footer: { text: `📦 Showing ${picked.length} images` },
+                        carouselMessage: {
+                            cards: carouselCards
+                        }
+                    }
+                }
+            }
+        }, {
+            quoted: mek
+        });
+
+        await Gifted.relayMessage(from, carouselMessage.message, {
+            messageId: carouselMessage.key.id
+        });
+
+    } catch (e) {
+        console.error("Error in image command:", e);
+        reply("❌ An error occurred while fetching images.");
     }
 });
 
