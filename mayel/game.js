@@ -367,7 +367,7 @@ const tictactoeManager = new TicTacToeManager();
 
 
 // Start Game
-
+/*
 gmd({ pattern: "ttt",
  desc: "Start a TicTacToe game with another user",
  category: "games", 
@@ -392,6 +392,40 @@ await Gifted.sendMessage(from, {
 });
 
 } catch (e) { console.error("TicTacToe Start Error:", e); reply("❌ Error starting the game. Try again."); } });
+*/
+gmd({
+  pattern: "ttt",
+  desc: "Start a TicTacToe game with another user",
+  category: "games",
+  filename: __filename
+}, async (Gifted, mek, m, { sender, isGroup, quoted, reply, from }) => {
+  try {
+    // Check if user replied to someone
+    if (!quoted || !quoted.sender) {
+      return reply("❗Please *reply to someone's message* to challenge them to a game.");
+    }
+
+    // Prevent playing with self
+    if (quoted.sender === sender) {
+      return reply("🤨 You cannot play with yourself!");
+    }
+
+    // Create game via manager
+    const result = tictactoeManager.createGame(from, sender, quoted.sender);
+    if (!result.success) return reply(result.message);
+
+    const board = tictactoeManager.formatBoard(result.gameState.board);
+
+    await Gifted.sendMessage(from, {
+      text: `🎮 *TIC-TAC-TOE* 🎮\n\n${result.message}\n\n${board}\n\n@${result.gameState.currentPlayer.split('@')[0]}'s turn (❌)\n\nTo make a move, send a number (1-9).`,
+      mentions: [sender, quoted.sender]
+    });
+
+  } catch (e) {
+    console.error("TicTacToe Start Error:", e);
+    reply("❌ Error starting the game. Make sure you replied to a user's message.");
+  }
+});
 
 // End Game
 
