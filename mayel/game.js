@@ -429,59 +429,77 @@ gmd({
 
 // End Game
 
-gmd({ pattern: "ttend", 
-desc: "End your current TicTacToe game",
- category: "games", 
- filename: __filename
-  }, async (Gifted, mek, m, { sender, from, reply }) => {
-   try {
+gmd({
+  pattern: "ttend",
+  desc: "End your current TicTacToe game",
+  category: "games",
+  filename: __filename
+}, async (Gifted, mek, m, { sender, from, reply }) => {
+  try {
     const result = tictactoeManager.endGame(from, sender);
-     if (!result.success) return reply(result.message);
+    if (!result.success) return reply(result.message);
 
-await Gifted.sendMessage(from, {
-  text: result.message,
-  mentions: [sender, result.opponent]
+    // Defensive check for opponent presence
+    const mentions = [sender];
+    if (result.opponent) mentions.push(result.opponent);
+
+    await Gifted.sendMessage(from, {
+      text: result.message,
+      mentions
+    });
+
+  } catch (e) {
+    console.error("TicTacToe End Error:", e);
+    reply("❌ Error ending the game. Please try again.");
+  }
 });
 
-} catch (e) { console.error("TicTacToe End Error:", e); reply("❌ Error ending the game."); } });
-
 // Handle move inputs 1-9
+gmd({
+  on: "body"
+}, async (Gifted, mek, m, { sender, from, body }) => {
+  try {
+    if (!/^[1-9]$/.test(body.trim())) return;
+    const position = parseInt(body.trim()) - 1;
 
-gmd({ 
-on: "body" 
-}, async (Gifted, mek, m, { sender, from, body }) => { try { if (!/^[1-9]$/.test(body.trim())) return; const position = parseInt(body.trim()) - 1;
+    const gameInfo = tictactoeManager.getGameState(from, sender);
+    if (!gameInfo) return;
 
-const gameInfo = tictactoeManager.getGameState(from, sender);
-if (!gameInfo) return;
+    const moveResult = tictactoeManager.makeMove(from, sender, position);
+    if (!moveResult.success) {
+      return Gifted.sendMessage(from, { text: moveResult.message });
+    }
 
-const moveResult = tictactoeManager.makeMove(from, sender, position);
-if (!moveResult.success) return Gifted.sendMessage(from, { text: moveResult.message });
+    const formattedBoard = tictactoeManager.formatBoard(moveResult.board);
 
-const formattedBoard = tictactoeManager.formatBoard(moveResult.board);
+    // Game result check
+    if (moveResult.result) {
+      const opponent = gameInfo.gameState.players.find(p => p !== sender);
+      if (moveResult.result.status === 'win') {
+        return await Gifted.sendMessage(from, {
+          text: `🎉 @${sender.split('@')[0]} (${moveResult.result.symbol}) has *won* the game! 🎉\n\n${formattedBoard}`,
+          mentions: [sender, opponent]
+        });
+      } else if (moveResult.result.status === 'draw') {
+        return await Gifted.sendMessage(from, {
+          text: `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n🤝 The game ended in a *draw*! 🤝`,
+          mentions: gameInfo.gameState.players
+        });
+      }
+    }
 
-if (moveResult.result) {
-  if (moveResult.result.status === 'win') {
+    // Ongoing game — next turn
+    const next = moveResult.nextPlayer;
+    const nextSymbol = gameInfo.gameState.symbols[next];
     await Gifted.sendMessage(from, {
-      text: `🎉 @${sender.split('@')[0]} (${moveResult.result.symbol}) has won the game! 🎉`,
-      mentions: [sender, gameInfo.gameState.players.find(p => p !== sender)]
+      text: `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n@${next.split('@')[0]}'s turn (${nextSymbol})`,
+      mentions: [next]
     });
-  } else if (moveResult.result.status === 'draw') {
-    await Gifted.sendMessage(from, {
-      text: `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n🤝 The game ended in a draw! 🤝`,
-      mentions: gameInfo.gameState.players
-    });
+
+  } catch (e) {
+    console.error("TicTacToe Move Error:", e);
   }
-} else {
-  const nextPlayerSymbol = gameInfo.gameState.symbols[moveResult.nextPlayer];
-  await Gifted.sendMessage(from, {
-    text: `🎮 *TIC-TAC-TOE* 🎮\n\n${formattedBoard}\n\n@${moveResult.nextPlayer.split('@')[0]}'s turn (${nextPlayerSymbol})`,
-    mentions: [moveResult.nextPlayer]
-  });
-}
-
-} catch (e) { console.error("TicTacToe Move Error:", e); } });
-
-
+});
 //coded by prince tech x gifted 
 
 
