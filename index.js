@@ -196,7 +196,14 @@ Gifted.ev.on('creds.update', saveCreds)
 Gifted.ev.on("call", async (json) => {
   await GiftedAnticall(json, Gifted);
 });
-    
+    Gifted.ev.on("messages.update", async (updates) => {
+  try {
+    await GiftedAntidelete(updates, Gifted);
+  } catch (err) {
+    console.error("❌ Error in antidelete handler:", err);
+  }
+});
+
     Gifted.ev.on('group-participants.update', async (update) => {
   try {
     if (config.WELCOME !== "true") return;
