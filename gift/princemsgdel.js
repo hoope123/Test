@@ -48,11 +48,11 @@ async function GiftedAntidelete(updates, Gifted) {
     if (!ANTI_DELETE || ANTI_DELETE === "false") return;
 
     for (const update of updates) {
-        const key = update?.key;
-        const updateContent = update?.update;
+        try {
+            const key = update?.key;
+            const updateContent = update?.update;
 
-        if (key && (updateContent?.deleteMessage || updateContent?.message === null)) {
-            if (key.fromMe) continue;
+            if (!key || key.fromMe || (!updateContent?.deleteMessage && updateContent?.message !== null)) continue;
 
             const jid = key.remoteJid;
             const isBroadcast = isJidBroadcast(jid);
@@ -65,7 +65,10 @@ async function GiftedAntidelete(updates, Gifted) {
             }
 
             const store = await loadMessage(key.id);
-            if (!store) continue;
+            if (!store || !store.message) {
+                console.warn("⚠️ Deleted message not found or missing content:", key.id);
+                continue;
+            }
 
             const time = formatTime(Date.now());
             const date = formatDate(Date.now());
@@ -77,7 +80,7 @@ async function GiftedAntidelete(updates, Gifted) {
                 const deleter = key.participant || jid;
 
                 if (!isMediaMessage(store.message)) {
-                    const textMessage = store?.message?.conversation || store?.message?.extendedTextMessage?.text || '';
+                    const textMessage = store.message?.conversation || store.message?.extendedTextMessage?.text || '';
                     await Gifted.sendMessage(Gifted.user.id, {
                         text: `🚨 *ANTIDELETE MESSAGES!* 🚨\n\nGroup: ${groupName}\n*𝚂𝙴𝙽𝚃 𝙱𝚈:* @${
                             sender.split('@')[0]
@@ -100,14 +103,14 @@ async function GiftedAntidelete(updates, Gifted) {
                         ptt: media.ptt,
                         mentions: [sender, deleter]
                     });
-
                     setTimeout(() => fs.unlink(media.path).catch(() => {}), 30000);
                 }
+
             } else {
                 const sender = key.fromMe ? jidNormalizedUser(Gifted.user.id) : jid;
 
                 if (!isMediaMessage(store.message)) {
-                    const textMessage = store?.message?.conversation || store?.message?.extendedTextMessage?.text || '';
+                    const textMessage = store.message?.conversation || store.message?.extendedTextMessage?.text || '';
                     await Gifted.sendMessage(Gifted.user.id, {
                         text: `🚨 *ANTIDELETE MESSAGES!* 🚨\n\n*𝚂𝙴𝙽𝚃 𝙱𝚈:* @${
                             sender.split('@')[0]
@@ -126,12 +129,14 @@ async function GiftedAntidelete(updates, Gifted) {
                         ptt: media.ptt,
                         mentions: [sender]
                     });
-
                     setTimeout(() => fs.unlink(media.path).catch(() => {}), 30000);
                 }
             }
+        } catch (err) {
+            console.error("❌ Error in antidelete handler:", err.message);
         }
     }
 }
+
 
 module.exports = { GiftedAntidelete };
