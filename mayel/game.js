@@ -367,32 +367,9 @@ const tictactoeManager = new TicTacToeManager();
 
 
 // Start Game
-/*
-gmd({ pattern: "ttt",
- desc: "Start a TicTacToe game with another user",
- category: "games", 
- filename: __filename
-  }, async (Gifted, mek, m, { sender, isGroup, quoted, reply, from }) => {
-  
-    try {
-    
 
-if (!quoted) return reply("Reply to someone to start a game with them!");
 
-if (quoted.sender === sender) return reply("You cannot play with yourself!");
 
-const result = tictactoeManager.createGame(from, sender, quoted.sender);
-if (!result.success) return reply(result.message);
-
-const formattedBoard = tictactoeManager.formatBoard(result.gameState.board);
-
-await Gifted.sendMessage(from, {
-  text: `🎮 *TIC-TAC-TOE* 🎮\n\n${result.message}\n\n${formattedBoard}\n\n@${result.gameState.currentPlayer.split('@')[0]}'s turn (❌)\n\nTo make a move, send a number (1-9).`,
-  mentions: [sender, quoted.sender]
-});
-
-} catch (e) { console.error("TicTacToe Start Error:", e); reply("❌ Error starting the game. Try again."); } });
-*/
 gmd({
   pattern: "ttt",
   desc: "Start a TicTacToe game with another user",
