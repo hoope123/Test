@@ -8,6 +8,135 @@ const { gmd, config, commands, fetchJson, getBuffer, GiftedApkDl } = require('..
       yts = require('yt-search');
 
 
+
+
+gmd({
+  pattern: "video",
+  alias: ["ytmp4", "videodl", "videodoc", "ytmp4doc", "ytmp4dl"],
+  desc: "Download Youtube Videos(mp4)",
+  category: "downloader",
+  react: "📽",
+  filename: __filename
+},
+async (Gifted, mek, m, { from, q, reply }) => {
+  try {
+    if (!q) return reply(`Please provide a YouTube video name or URL!\n\n*Example:*\n${prefix}video Alan Walker - Faded\n${prefix}video https://youtu.be/example`);
+
+    let videoUrl, title, thumbnail, duration, views, author;
+    let downloadUrl;
+
+    if (q.startsWith("https://youtu")) {
+      const downloadData = await fetchJson(`${global.api}/download/ytmp4?apikey=${global.myName}&url=${encodeURIComponent(q)}`);
+      if (!downloadData || !downloadData.result) return reply("❌ Failed to download video.");
+      downloadUrl = downloadData.result.download_url;
+      title = downloadData.result.title;
+      thumbnail = downloadData.result.thumbnail;
+      duration = downloadData.result.duration;
+      views = downloadData.result.views;
+      author = downloadData.result.author || "Unknown";
+    } else {
+      const searchData = await fetchJson(`${global.api}/search/yts?apikey=${global.myName}&query=${encodeURIComponent(q)}`);
+      if (!searchData || !searchData.results || !searchData.results[0]) return reply("❌ No results found for that video name.");
+      const result = searchData.results[0];
+      videoUrl = result.url;
+      title = result.title;
+      thumbnail = result.thumbnail;
+      duration = result.timestamp;
+      views = result.views;
+      author = result.author.name;
+      const downloadData = await fetchJson(`${global.api}/download/ytmp4?apikey=${global.myName}&url=${encodeURIComponent(videoUrl)}`);
+      if (!downloadData || !downloadData.result) return reply("❌ Failed to fetch video from search.");
+      downloadUrl = downloadData.result.download_url;
+    }
+
+    const buffer = await getBuffer(downloadUrl);
+
+    const infoMess = {
+      image: { url: thumbnail },
+      caption: `> *${config.BOT_NAME} 𝐕𝐈𝐃𝐄𝐎 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐄𝐑*  
+╭───────────────◆  
+│🎬 *Title:* ${title}
+│📺 *Quality:* mp4 (720p)
+│⏳ *Duration:* ${duration}
+│👁 *Views:* ${views}
+│🎙 *Artist:* ${author}
+╰────────────────◆  
+⦿ *Direct Link:* ${videoUrl || q}
+
+Reply With:
+*1* To Download Video 🎥  
+*2* To Download Video as Document 📄
+
+╭────────────────◆  
+│ ${global.footer}
+╰─────────────────◆`,
+      contextInfo: {
+        mentionedJid: [m.sender],
+        forwardingScore: 5,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: '120363322606369079@newsletter',
+          newsletterName: "PRINCE TECH",
+          serverMessageId: 143
+        }
+      }
+    };
+
+    const sentMsg = await Gifted.sendMessage(from, infoMess, { quoted: mek });
+    const originalMsgId = sentMsg.key.id;
+
+    Gifted.ev.on("messages.upsert", async (event) => {
+      const msg = event.messages?.[0];
+      if (!msg?.message) return;
+      const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+      const isReply = msg.message.extendedTextMessage?.contextInfo?.stanzaId === originalMsgId;
+
+      if (isReply) {
+        await m.react("⬇️");
+        if (text === "1") {
+          await Gifted.sendMessage(from, {
+            video: buffer,
+            fileName: `${title}.mp4`,
+            mimetype: "video/mp4",
+            contextInfo: {
+              externalAdReply: {
+                title: title,
+                body: 'ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘʀɪɴᴄᴇ ᴛᴇᴄʜ',
+                thumbnailUrl: thumbnail,
+                sourceUrl: videoUrl || q,
+                mediaType: 1
+              }
+            }
+          }, { quoted: msg });
+          await m.react("✅");
+        } else if (text === "2") {
+          await Gifted.sendMessage(from, {
+            document: buffer,
+            mimetype: "video/mp4",
+            fileName: `${title}.mp4`,
+            contextInfo: {
+              externalAdReply: {
+                title: title,
+                body: 'ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘʀɪɴᴄᴇ ᴛᴇᴄʜ',
+                thumbnailUrl: thumbnail,
+                sourceUrl: videoUrl || q,
+                mediaType: 1
+              }
+            }
+          }, { quoted: msg });
+          await m.react("✅");
+        } else {
+          await Gifted.sendMessage(from, { text: "❌ Invalid reply. Reply with *1* or *2* only." }, { quoted: msg });
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error("Video downloader error:", err);
+    reply("❌ Something went wrong. Try again later.");
+  }
+});
+
 gmd({
     pattern: "gitclone",
     desc: "Clone/Download GitHub Repositories",
