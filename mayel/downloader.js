@@ -8,6 +8,77 @@ const { gmd, config, commands, fetchJson, getBuffer, GiftedApkDl } = require('..
       yts = require('yt-search');
 
 
+gmd({ pattern: "play2", alias: ["music", "ytmp3", "ytmp3doc", "song", "audiodoc", "audio"], desc: "Download Youtube Songs(mp3)", category: "downloader", react: "🎶", filename: __filename }, async (Gifted, mek, m, { from, q, reply }) => { try { if (!q) return reply(Please provide a YouTube song name or URL!\n\n*Example:*\n${prefix}play Alan Walker - Faded\n${prefix}play https://youtu.be/example);
+
+let videoUrl, title, thumbnail, duration, views, author, downloadUrl;
+
+if (q.startsWith("https://youtu")) {
+  const downloadData = await fetchJson(`${global.api}/download/ytmp3?apikey=${global.myName}&url=${encodeURIComponent(q)}`);
+  if (!downloadData || !downloadData.result) return reply("❌ Failed to download audio.");
+  downloadUrl = downloadData.result.download_url;
+  const meta = await fetchJson(`${global.api}/search/yts?apikey=${global.myName}&query=${encodeURIComponent(q)}`);
+  const res = meta.results[0];
+  title = res.title;
+  thumbnail = res.thumbnail;
+  duration = res.timestamp;
+  views = res.views;
+  author = res.author.name;
+  videoUrl = res.url;
+} else {
+  const searchData = await fetchJson(`${global.api}/search/yts?apikey=${global.myName}&query=${encodeURIComponent(q)}`);
+  if (!searchData || !searchData.results || !searchData.results[0]) return reply("❌ No results found for that song.");
+  const res = searchData.results[0];
+  videoUrl = res.url;
+  title = res.title;
+  thumbnail = res.thumbnail;
+  duration = res.timestamp;
+  views = res.views;
+  author = res.author.name;
+  const downloadData = await fetchJson(`${global.api}/download/ytmp3?apikey=${global.myName}&url=${encodeURIComponent(videoUrl)}`);
+  if (!downloadData || !downloadData.result) return reply("❌ Failed to fetch song download URL.");
+  downloadUrl = downloadData.result.download_url;
+}
+
+const buffer = await getBuffer(downloadUrl);
+
+const infoMess = {
+  image: { url: thumbnail },
+  caption: `> *${config.BOT_NAME} 𝐒𝐎𝐍𝐆 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐄𝐑*
+
+╭───────────────◆
+│⿻ Title: ${title} │⿻ Quality: mp3 (128kbps) │⿻ Duration: ${duration} │⿻ Viewers: ${views} │⿻ Artist: ${author} ╰────────────────◆
+⦿ Direct Yt Link: ${videoUrl}
+
+Reply With: 1 To Download Audio 🎶
+2 To Download Audio Document 📄
+
+╭────────────────◆
+│ ${global.footer} ╰─────────────────◆`, contextInfo: { mentionedJid: [m.sender], forwardingScore: 5, isForwarded: true, forwardedNewsletterMessageInfo: { newsletterJid: '120363322606369079@newsletter', newsletterName: "PRINCE TECH", serverMessageId: 143 } } };
+
+const sentMsg = await Gifted.sendMessage(from, infoMess, { quoted: mek });
+const originalMsgId = sentMsg.key.id;
+
+const replyMap = global.songReplies || (global.songReplies = new Map());
+replyMap.set(originalMsgId, {
+  buffer,
+  title,
+  thumbnail,
+  videoUrl,
+  from
+});
+
+} catch (err) { console.error("Play downloader error:", err); reply("❌ Something went wrong. Try again later."); } });
+
+// Global reply handler (place this once in your main message handler file) Gifted.ev.on("messages.upsert", async (event) => { const msg = event.messages?.[0]; if (!msg?.message) return;
+
+const text = msg.message.conversation || msg.message.extendedTextMessage?.text; const stanzaId = msg.message.extendedTextMessage?.contextInfo?.stanzaId; const replyMap = global.songReplies; if (!replyMap?.has(stanzaId)) return;
+
+const { buffer, title, thumbnail, videoUrl, from } = replyMap.get(stanzaId);
+
+switch (text) { case "1": await Gifted.sendMessage(from, { audio: buffer, mimetype: "audio/mpeg", fileName: ${title}.mp3, contextInfo: { externalAdReply: { title, body: 'ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘʀɪɴᴄᴇ ᴛᴇᴄʜ', thumbnailUrl: thumbnail, sourceUrl: videoUrl, mediaType: 1 } } }, { quoted: msg }); break; case "2": await Gifted.sendMessage(from, { document: buffer, mimetype: "audio/mpeg", fileName: ${title}.mp3, contextInfo: { externalAdReply: { title, body: 'ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘʀɪɴᴄᴇ ᴛᴇᴄʜ', thumbnailUrl: thumbnail, sourceUrl: videoUrl, mediaType: 1 } } }, { quoted: msg }); break; default: await Gifted.sendMessage(from, { text: "❌ Invalid reply. Reply with 1 or 2 only." }, { quoted: msg }); }
+
+replyMap.delete(stanzaId); });
+
 
 
 gmd({
