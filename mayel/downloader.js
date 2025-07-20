@@ -230,8 +230,8 @@ async (Gifted, mek, m, { from, q, isOwner, reply }) => {
    */
 
 gmd({
-  pattern: "video",
-  alias: ["ytmp4", "videodl", "videodoc", "ytmp4doc", "ytmp4dl"],
+  pattern: "video2",
+  alias: ["ytmp42", "videodl2", "videodoc2", "ytmp4doc2", "ytmp4dl"],
   desc: "Download Youtube Videos(mp4)",
   category: "downloader",
   react: "📽",
