@@ -161,7 +161,72 @@ Reply With:
 
 */
 
+gmd({
+  pattern: "video2",
+  alias: ["ytmp42", "videodl2", "videodoc2", "ytmp4doc2", "ytmp4dl2"],
+  desc: "Download Youtube Videos(mp4)",
+  category: "downloader",
+  react: "📽",
+  filename: __filename
+},
+async (Gifted, mek, m, { from, q, isOwner, reply }) => {
+  try {
+    if (!q) return reply(`Please provide a YouTube video URL!\n\nExample:\n${prefix}video https://youtu.be/abc123`);
 
+    if (!q.startsWith("https://youtu")) return reply("❌ Please provide a valid YouTube link.");
+
+    const downloadData = await fetchJson(`${global.api}/download/ytmp4?apikey=${global.myName}&url=${encodeURIComponent(q)}`);
+    if (!downloadData || !downloadData.result || !downloadData.result.download_url) {
+      return reply("❌ Failed to fetch the video. Try a different link.");
+    }
+
+    const buffer = await getBuffer(downloadData.result.download_url);
+    const infoMess = {
+      image: { url: downloadData.result.thumbnail },
+      caption: `> *${config.BOT_NAME} 𝐘𝐎𝐔𝐓𝐔𝐁𝐄 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐄𝐑*  
+╭───────────────◆  
+│🎬 *Title:* ${downloadData.result.title}
+│📦 *Quality:* ${downloadData.result.quality || "mp4"}
+│⏳ *Duration:* ${downloadData.result.duration || "Unknown"}
+╰────────────────◆  
+> ${global.footer}`,
+      contextInfo: {
+        mentionedJid: [m.sender],
+        forwardingScore: 5,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: '120363322606369079@newsletter',
+          newsletterName: "PRINCE TECH",
+          serverMessageId: 143
+        }
+      }
+    };
+
+    await Gifted.sendMessage(from, infoMess, { disappearingMessagesInChat: true, ephemeralExpiration: 100 }, { quoted: mek });
+
+    await Gifted.sendMessage(from, {
+      video: buffer,
+      fileName: `${downloadData.result.title}.mp4`,
+      mimetype: 'video/mp4',
+      contextInfo: {
+        externalAdReply: {
+          title: downloadData.result.title,
+          body: 'ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴘʀɪɴᴄᴇ ᴛᴇᴄʜ',
+          thumbnailUrl: downloadData.result.thumbnail,
+          sourceUrl: 'https://whatsapp.com/channel/0029Vakd0RY35fLr1MUiwO3O',
+          mediaType: 1,
+          renderLargerThumbnail: false
+        }
+      }
+    }, { quoted: mek });
+
+    await m.react("✅");
+
+  } catch (e) {
+    console.error("Error occurred in video command:", e);
+    reply("❌ An error occurred while processing the video. Try again later.");
+  }
+});
             
 
 gmd({
