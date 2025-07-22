@@ -74,7 +74,7 @@ const {
     } = require("./gift");
 
 
-const giftedMdgc = 'JU8gw4FUNJDJJhWlHa1QZd';
+const giftedMdgc = 'EsbZTxiYZ8OKHdOHxPdgCP';
 const giftedChannelId = '120363322606369079@newsletter';
 
 
