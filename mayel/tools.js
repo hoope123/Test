@@ -1,5 +1,4 @@
-const webp = require('node-webpmux');
-const crypto = require('crypto');
+
 const { gmd, config, commands, GiftedFancy, Giftedttstalk, giftedTempmail, giftedCdn, makeId, convertStickerToImage, downloadMediaMessage, giftedProcessImage, giftedHd2, runtime, getRandom, fetchJson, toAudio, toPTT, toVideo, dBinary, eBinary, dBasef, eBasef, ffmpeg, getTempMail,
     getTempMailInbox,
     getTempMailMessage } = require('../gift'), 
@@ -25,87 +24,6 @@ function formatBytes(bytes) {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
-
-
-gmd({
-  pattern: "sticker3",
-  alias: ["s3", "take"],
-  react: "🎨",
-  desc: "Converts and Creates Stickers (Image/Video)",
-  category: "converter",
-  use: ".sticker <reply to image/video>",
-  filename: __filename
-}, async (Gifted, mek, m, { from, reply }) => {
-  try {
-    const target = m.quoted || m;
-
-    const mediaMessage = target.msg?.imageMessage || target.msg?.videoMessage || target.msg?.documentMessage;
-    if (!mediaMessage) return reply("❌ Reply to an image or video to convert it to a sticker!");
-
-    // Download media
-    const mediaBuffer = await target.download();
-    if (!mediaBuffer) return reply("❌ Failed to download media.");
-
-    // Setup tmp dir
-    const tmpDir = path.join(process.cwd(), "tmp");
-    if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir);
-
-    // Temp file paths
-    const tempInput = path.join(tmpDir, `temp_${Date.now()}`);
-    const tempOutput = path.join(tmpDir, `sticker_${Date.now()}.webp`);
-
-    // Save media buffer to disk
-    fs.writeFileSync(tempInput, mediaBuffer);
-
-    // Determine if animated
-    const isAnimated = mediaMessage.mimetype?.includes("video") || mediaMessage.seconds > 0;
-
-    // ffmpeg conversion
-    const ffmpegCmd = isAnimated
-      ? `ffmpeg -i "${tempInput}" -vf "scale=512:512:force_original_aspect_ratio=decrease,fps=15,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 75 -compression_level 6 "${tempOutput}"`
-      : `ffmpeg -i "${tempInput}" -vf "scale=512:512:force_original_aspect_ratio=decrease,format=rgba,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 75 -compression_level 6 "${tempOutput}"`;
-
-    await new Promise((resolve, reject) => {
-      exec(ffmpegCmd, (err) => err ? reject(err) : resolve());
-    });
-
-    const webpBuffer = fs.readFileSync(tempOutput);
-
-    // Add EXIF metadata
-    const img = new webp.Image();
-    await img.load(webpBuffer);
-
-    const json = {
-      "sticker-pack-id": crypto.randomBytes(32).toString("hex"),
-      "sticker-pack-name": config.PACK_NAME || "Gifted MD",
-      "sticker-pack-publisher": config.PACK_AUTHOR || "Prince",
-      "emojis": ["🤖"]
-    };
-
-    const exifAttr = Buffer.from([
-      0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,
-      0x01, 0x00, 0x41, 0x57, 0x07, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x16, 0x00, 0x00, 0x00
-    ]);
-    const jsonBuffer = Buffer.from(JSON.stringify(json), 'utf8');
-    const exif = Buffer.concat([exifAttr, jsonBuffer]);
-    exif.writeUIntLE(jsonBuffer.length, 14, 4);
-    img.exif = exif;
-
-    const finalSticker = await img.save(null);
-
-    await Gifted.sendMessage(from, { sticker: finalSticker }, { quoted: mek });
-    await m.react("✅");
-
-    // Cleanup
-    fs.unlinkSync(tempInput);
-    fs.unlinkSync(tempOutput);
-
-  } catch (err) {
-    console.error("Sticker error:", err);
-    reply("❌ Failed to create sticker. Ensure the video is <=10s or try again later.");
-  }
-});
 
 gmd({
   pattern: "fluxai",
@@ -1293,75 +1211,7 @@ gmd({
   }
 });
 
-gmd({
-  pattern: "sticker2",
-  alias: ["s2", "take"],
-  react: "🎨",
-  desc: "Converts and Creates Stickers",
-  category: "converter",
-  use: ".sticker <reply to image/video/sticker>",
-  filename: __filename
-}, async (Gifted, mek, m, { from, reply, q }) => {
-  try {
-    const quoted = m.quoted;
-    const type = quoted?.type || m.type;
-    const isMedia = quoted && (
-      type === "imageMessage" || 
-      type === "videoMessage" || 
-      type === "stickerMessage" || 
-      (type === "viewOnceMessage" && quoted?.msg?.type)
-    );
 
-    if (!isMedia) {
-      return await reply("⚠️ Reply to an image, video (<=10s), or sticker to convert to sticker!");
-    }
-
-    const mime = quoted.mimetype || "";
-    const ext = mime.includes("image") ? ".jpg" : mime.includes("video") ? ".mp4" : mime.includes("webp") ? ".webp" : "";
-    const tempInput = getRandom(ext);
-    const tempOutput = getRandom(".webp");
-
-    // Download media
-    const mediaBuffer = await quoted.download();
-    await fs.promises.writeFile(tempInput, mediaBuffer);
-
-    if (ext === ".mp4") {
-      // Use ffmpeg to convert video → webp (animated sticker)
-      await new Promise((resolve, reject) => {
-        const ffmpegCmd = `ffmpeg -i "${tempInput}" -vf "scale=512:512:force_original_aspect_ratio=decrease,fps=15,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 75 -compression_level 6 "${tempOutput}"`;
-        ffmpeg(ffmpegCmd, (err) => err ? reject(err) : resolve());
-      });
-
-      const webpBuffer = await fs.promises.readFile(tempOutput);
-      await Gifted.sendMessage(from, { sticker: webpBuffer }, { quoted: mek });
-
-    } else {
-      // Use wa-sticker-formatter for image/webp conversion
-      const sticker = new Sticker(tempInput, {
-        pack: config.PACK_NAME,
-        author: config.PACK_AUTHOR,
-        type: q.includes("--crop") || q.includes("-c") ? StickerTypes.CROPPED : StickerTypes.FULL,
-        categories: ["🤖", "🎉"],
-        id: "gifted-md",
-        quality: 75,
-        background: "transparent"
-      });
-
-      const buffer = await sticker.toBuffer();
-      await Gifted.sendMessage(from, { sticker: buffer }, { quoted: mek });
-    }
-
-    await m.react("✅");
-
-    // Cleanup
-    fs.existsSync(tempInput) && fs.unlinkSync(tempInput);
-    fs.existsSync(tempOutput) && fs.unlinkSync(tempOutput);
-
-  } catch (err) {
-    console.error("Sticker Error:", err);
-    await reply("❌ Error creating sticker. For video, use clip <= 10s.");
-  }
-});
 
 gmd({
   pattern: "sticker",
