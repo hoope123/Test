@@ -1212,7 +1212,6 @@ gmd({
   }
 });
 
-
 gmd({
   pattern: "sticker2",
   alias: ["s2", "take"],
@@ -1225,43 +1224,63 @@ gmd({
   try {
     const quoted = m.quoted;
     const type = quoted?.type || m.type;
-    const isMedia = type === "imageMessage" || type === "videoMessage" || type === "stickerMessage" || (type === "viewOnceMessage" && quoted?.msg?.type);
+    const isMedia = quoted && (
+      type === "imageMessage" || 
+      type === "videoMessage" || 
+      type === "stickerMessage" || 
+      (type === "viewOnceMessage" && quoted?.msg?.type)
+    );
 
-    if (!quoted || !isMedia) {
-      return await reply("Please reply to an image, video, or sticker to convert it to sticker!");
+    if (!isMedia) {
+      return await reply("⚠️ Reply to an image, video (<=10s), or sticker to convert to sticker!");
     }
 
-    // Download media
-    const mediaData = await quoted.download();
-    const ext = type === "videoMessage" ? ".mp4" : type === "stickerMessage" ? ".webp" : ".jpg";
+    const mime = quoted.mimetype || "";
+    const ext = mime.includes("image") ? ".jpg" : mime.includes("video") ? ".mp4" : mime.includes("webp") ? ".webp" : "";
     const tempInput = getRandom(ext);
+    const tempOutput = getRandom(".webp");
 
-    await fs.promises.writeFile(tempInput, mediaData);
+    // Download media
+    const mediaBuffer = await quoted.download();
+    await fs.promises.writeFile(tempInput, mediaBuffer);
 
-    // Sticker settings
-    const sticker = new Sticker(tempInput, {
-      pack: config.PACK_NAME,
-      author: config.PACK_AUTHOR,
-      type: q.includes("--crop") || q.includes("-c") ? StickerTypes.CROPPED : StickerTypes.FULL,
-      categories: ["🤩", "🎉"],
-      id: "prince",
-      quality: 75,
-      background: "transparent"
-    });
+    if (ext === ".mp4") {
+      // Use ffmpeg to convert video → webp (animated sticker)
+      await new Promise((resolve, reject) => {
+        const ffmpegCmd = `ffmpeg -i "${tempInput}" -vf "scale=512:512:force_original_aspect_ratio=decrease,fps=15,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=#00000000" -c:v libwebp -preset default -loop 0 -vsync 0 -pix_fmt yuva420p -quality 75 -compression_level 6 "${tempOutput}"`;
+        ffmpeg(ffmpegCmd, (err) => err ? reject(err) : resolve());
+      });
 
-    const buffer = await sticker.toBuffer();
-    await Gifted.sendMessage(from, { sticker: buffer }, { quoted: mek });
-    await m.react('✅');
+      const webpBuffer = await fs.promises.readFile(tempOutput);
+      await Gifted.sendMessage(from, { sticker: webpBuffer }, { quoted: mek });
+
+    } else {
+      // Use wa-sticker-formatter for image/webp conversion
+      const sticker = new Sticker(tempInput, {
+        pack: config.PACK_NAME,
+        author: config.PACK_AUTHOR,
+        type: q.includes("--crop") || q.includes("-c") ? StickerTypes.CROPPED : StickerTypes.FULL,
+        categories: ["🤖", "🎉"],
+        id: "gifted-md",
+        quality: 75,
+        background: "transparent"
+      });
+
+      const buffer = await sticker.toBuffer();
+      await Gifted.sendMessage(from, { sticker: buffer }, { quoted: mek });
+    }
+
+    await m.react("✅");
 
     // Cleanup
-    fs.unlinkSync(tempInput);
+    fs.existsSync(tempInput) && fs.unlinkSync(tempInput);
+    fs.existsSync(tempOutput) && fs.unlinkSync(tempOutput);
 
   } catch (err) {
     console.error("Sticker Error:", err);
-    await reply("❌ Error creating sticker. Try replying to an image/video/sticker.");
+    await reply("❌ Error creating sticker. For video, use clip <= 10s.");
   }
 });
-
 
 gmd({
   pattern: "sticker",
