@@ -1212,6 +1212,57 @@ gmd({
   }
 });
 
+
+gmd({
+  pattern: "sticker2",
+  alias: ["s2", "take"],
+  react: "🎨",
+  desc: "Converts and Creates Stickers",
+  category: "converter",
+  use: ".sticker <reply to image/video/sticker>",
+  filename: __filename
+}, async (Gifted, mek, m, { from, reply, q }) => {
+  try {
+    const quoted = m.quoted;
+    const type = quoted?.type || m.type;
+    const isMedia = type === "imageMessage" || type === "videoMessage" || type === "stickerMessage" || (type === "viewOnceMessage" && quoted?.msg?.type);
+
+    if (!quoted || !isMedia) {
+      return await reply("Please reply to an image, video, or sticker to convert it to sticker!");
+    }
+
+    // Download media
+    const mediaData = await quoted.download();
+    const ext = type === "videoMessage" ? ".mp4" : type === "stickerMessage" ? ".webp" : ".jpg";
+    const tempInput = getRandom(ext);
+
+    await fs.promises.writeFile(tempInput, mediaData);
+
+    // Sticker settings
+    const sticker = new Sticker(tempInput, {
+      pack: config.PACK_NAME,
+      author: config.PACK_AUTHOR,
+      type: q.includes("--crop") || q.includes("-c") ? StickerTypes.CROPPED : StickerTypes.FULL,
+      categories: ["🤩", "🎉"],
+      id: "prince",
+      quality: 75,
+      background: "transparent"
+    });
+
+    const buffer = await sticker.toBuffer();
+    await Gifted.sendMessage(from, { sticker: buffer }, { quoted: mek });
+    await m.react('✅');
+
+    // Cleanup
+    fs.unlinkSync(tempInput);
+
+  } catch (err) {
+    console.error("Sticker Error:", err);
+    await reply("❌ Error creating sticker. Try replying to an image/video/sticker.");
+  }
+});
+
+
 gmd({
   pattern: "sticker",
   react: "🎨",
