@@ -727,27 +727,33 @@ gmd({
 });
 
 gmd({
-  pattern: "hidetag",
-  desc: "Tags Every Person in the Group Without Mentioning their Numbers",
+  pattern: "tagall2",
+  desc: "Mention all Group Members.",
   react: "👥",
   category: "group",
-  filename: __filename,
-  use: "<text>"
-}, (Gifted, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
+  filename: __filename
+}, async (Gifted, mek, m, {
+  from, q, isGroup, isAdmins, reply
+}) => {
   try {
-    if (!isGroup) {
-      return reply("This command can only be used in groups.");
-    }
-    if (!q) {
-      return reply("Provide a text message");
-    }
-    if (!isAdmins) {
-      return reply("You Must Be Admin For Use This Command");
-    }
-    Gifted.sendMessage(from, {
-      text: q
-    });
+    if (!isGroup) return reply("This command only works in groups.");
+    if (!isAdmins) return reply("You must be an admin to use this command.");
+
+    const groupMetadata = await Gifted.groupMetadata(from);
+    const participants = groupMetadata.participants;
+    const participantIds = participants.map(p => p.id);
+
+    let message = "𝐏𝐑𝐈𝐍𝐂𝐄 𝐓𝐀𝐆𝐀𝐋𝐋\n\n";
+    if (q) message += `${q}\n\n`;
+    message += "> prince";
+
+    await Gifted.sendMessage(from, {
+      text: message,
+      mentions: participantIds
+    }, { quoted: mek });
   } catch (error) {
+    console.error(error);
+    await m.react('❌');
     return reply("An error occurred: " + error.message);
   }
 });
