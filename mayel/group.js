@@ -696,7 +696,7 @@ gmd({
     reply("Error: " + error.message);
   }
 });
-
+/*
 gmd({
   pattern: "tagall",
   desc: "Mention all Group Members.",
@@ -725,9 +725,10 @@ gmd({
     return reply("Error: " + error.message);
   }
 });
-
+*/
 gmd({
-  pattern: "tagall2",
+  pattern: "tagall",
+  alias: ["hidetag", "hidentag"],
   desc: "Mention all Group Members.",
   react: "👥",
   category: "group",
@@ -743,9 +744,15 @@ gmd({
     const participants = groupMetadata.participants;
     const participantIds = participants.map(p => p.id);
 
-    let message = "𝐏𝐑𝐈𝐍𝐂𝐄 𝐓𝐀𝐆𝐀𝐋𝐋\n\n";
-    if (q) message += `${q}\n\n`;
-    message += "> prince";
+    const message = `
+╭━━❰  👥  𝐓𝐀𝐆 𝐀𝐋𝐋 ❱━━◆
+┃
+┃  *🔰 Group:* ${groupMetadata.subject}
+┃  *👑 Admin:* @${m.sender.split("@")[0]}
+┃
+${q ? `┃  *💬 Message:* ${q}\n┃` : ""}
+╰━━━━━━━━━━━━━━━◆
+`;
 
     await Gifted.sendMessage(from, {
       text: message,
