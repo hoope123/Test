@@ -738,7 +738,7 @@ gmd({
 }) => {
   try {
     if (!isGroup) return reply("This command only works in groups.");
-    if (!isAdmins) return reply("You must be an admin to use this command.");
+    
 
     const groupMetadata = await Gifted.groupMetadata(from);
     const participants = groupMetadata.participants;
