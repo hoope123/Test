@@ -1353,26 +1353,28 @@ gmd({
   filename: __filename
 }, async (Gifted, mek, m, { from, q, reply, quoted }) => {
   try {
-    // Ensure there's either a quoted message or text input
     if (!q && !quoted) {
-      return reply(`Please provide a target language code and text or reply to a message.\nUsage: ${prefix}trt en Hello world`);
+      return reply(`Please provide a target language code and text, or reply to a message.\nUsage:\n${prefix}trt en Hello world\n${prefix}trt en (as reply to a message)`);
     }
 
-    // If user replied to a message with `.trt en`
-    let splitInput;
-    if (quoted && q.trim().length > 0) {
-      splitInput = q.trim().split(" ");
-    } else if (!quoted) {
-      splitInput = q.trim().split(" ");
-    } else {
-      return reply(`Please specify the target language code.\nExample: ${prefix}trt en`);
-    }
-
-    const targetLanguage = splitInput[0];
-    const text = quoted ? quoted.text || quoted.caption || "" : splitInput.slice(1).join(" ");
+    const splitInput = q.trim().split(" ");
+    const targetLanguage = splitInput[0]; // first word is always lang code
 
     if (!targetLanguage) return reply("⚠️ Please provide a target language code.");
-    if (!text) return reply("⚠️ No text found to translate.");
+
+    // Determine the text to translate
+    let text;
+    if (splitInput.length > 1) {
+      // User typed both lang and text
+      text = splitInput.slice(1).join(" ");
+    } else if (quoted) {
+      // User replied to a message with only lang code
+      text = quoted.text || quoted.caption || "";
+    }
+
+    if (!text || text.trim() === "") {
+      return reply("⚠️ No text found to translate.");
+    }
 
     const translation = await translatte(text, { to: targetLanguage });
 
@@ -1393,6 +1395,7 @@ gmd({
     return reply("⚠️ An error occurred while translating your text. Please try again later 🤕");
   }
 });
+
 gmd(
   {
     pattern: 'toaudio',
