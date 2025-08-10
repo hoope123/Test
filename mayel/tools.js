@@ -1344,39 +1344,37 @@ gmd({
   }
 });
 */
-
 gmd({
   pattern: "trt",
   alias: ["translate"],
   desc: "🌍 Translate text between languages or quoted message",
   react: "⚡",
   category: "converter",
-  filename: __filename
-}, async (Gifted, mek, m, { from, q, quoted, reply }) => {
+  filename: __filename,
+}, async (Gifted, mek, m, { from, q, quoted, reply, pushname }) => {
   try {
-    const langCode = q.trim().split(" ")[0]?.toLowerCase();
+    if (!q) return reply(`❌ Please provide a target language code.\nUsage: ${prefix}trt en Hello world\nOr reply to a message with ${prefix}trt en`);
+
+    const langCode = q.trim().split(" ")[0].toLowerCase();
     const inlineText = q.trim().split(" ").slice(1).join(" ");
 
-    if (!langCode) {
-      return reply(`❌ Please provide a target language code.\nUsage: ${prefix}trt en Hello world\nOr reply to a message with ${prefix}trt en`);
-    }
-
-    // Extract quoted text safely (support common Baileys structures)
+    // Extract text from quoted message (Baileys format)
     let textToTranslate = null;
-    if (quoted) {
-      if (quoted.text) {
-        textToTranslate = quoted.text;
-      } else if (quoted.message?.conversation) {
-        textToTranslate = quoted.message.conversation;
-      } else if (quoted.message?.extendedTextMessage?.text) {
+    if (quoted && quoted.message) {
+      if (quoted.message.conversation) textToTranslate = quoted.message.conversation;
+      else if (quoted.message.extendedTextMessage && quoted.message.extendedTextMessage.text) {
         textToTranslate = quoted.message.extendedTextMessage.text;
+      } else if (quoted.message.imageMessage && quoted.message.imageMessage.caption) {
+        textToTranslate = quoted.message.imageMessage.caption;
+      } else if (quoted.message.videoMessage && quoted.message.videoMessage.caption) {
+        textToTranslate = quoted.message.videoMessage.caption;
       }
     }
 
-    // If no quoted text or empty, fallback to inline text
+    // Fallback to inline text if no quoted text found
     if (!textToTranslate) {
       if (!inlineText) {
-        return reply(`❌ No text to translate. Reply to a message or provide text after the language code.\nUsage: ${prefix}trt en Hello world`);
+        return reply(`❌ No text to translate. Reply to a text message or provide text after the language code.\nUsage: ${prefix}trt en Hello world`);
       }
       textToTranslate = inlineText;
     }
@@ -1388,16 +1386,17 @@ gmd({
     }
 
     const responseMessage = `
+*Hey ${pushname}*
 *Original Text:* ${textToTranslate}
 *Translated Text:* ${translation.text}
 *Language:* ${langCode.toUpperCase()}
     `;
 
-    await reply(responseMessage);
+    await Gifted.sendMessage(from, { text: responseMessage }, { quoted: mek });
     await m.react('✅');
   } catch (error) {
     console.error("Translate command error:", error);
-    return reply("⚠️ An error occurred while translating your text. Please try again later 🤕");
+    reply("⚠️ An error occurred while translating your text. Please try again later 🤕");
   }
 });
 gmd(
