@@ -440,10 +440,26 @@ if (isGroup && !isAdmins && isBotAdmins) {
     }
 }
 // --- END ANTI-LINK HANDLER ---
-const reply = (teks) => {
+/*const reply = (teks) => {
   Gifted.sendMessage(from, { text: teks }, { quoted: mek });
 };
-
+*/
+const reply = async (teks) => {
+  try {
+    await Gifted.sendMessage(
+      from,
+      { text: teks },
+      { quoted: mek }
+    );
+  } catch (err) {
+    console.error("❌ Failed to send reply:", err);
+    await Gifted.sendMessage(
+      from,
+      { text: "⚠️ An error occurred while sending the reply." }
+    );
+  }
+};
+      
 Gifted.decodeJid = jid => {
     if (!jid) return jid;
     if (/:\d+@/gi.test(jid)) {
