@@ -1306,7 +1306,7 @@ async (Gifted, mek, m, { from, quoted, args, q, sender, reply }) => {
     }
 });
 
-
+/*
 gmd({
   pattern: "trt",
   alias: ["translate"],
@@ -1343,7 +1343,63 @@ gmd({
     return reply("⚠️ An error occurred while translating your text. Please try again later 🤕");
   }
 });
+*/
 
+gmd({
+  pattern: "trt",
+  alias: ["translate"],
+  desc: "🌍 Translate text between languages or quoted message",
+  react: "⚡",
+  category: "converter",
+  filename: __filename
+}, async (Gifted, mek, m, { from, q, quoted, reply }) => {
+  try {
+    const langCode = q.trim().split(" ")[0]?.toLowerCase();
+    const inlineText = q.trim().split(" ").slice(1).join(" ");
+
+    if (!langCode) {
+      return reply(`❌ Please provide a target language code.\nUsage: ${prefix}trt en Hello world\nOr reply to a message with ${prefix}trt en`);
+    }
+
+    // Extract quoted text safely (support common Baileys structures)
+    let textToTranslate = null;
+    if (quoted) {
+      if (quoted.text) {
+        textToTranslate = quoted.text;
+      } else if (quoted.message?.conversation) {
+        textToTranslate = quoted.message.conversation;
+      } else if (quoted.message?.extendedTextMessage?.text) {
+        textToTranslate = quoted.message.extendedTextMessage.text;
+      }
+    }
+
+    // If no quoted text or empty, fallback to inline text
+    if (!textToTranslate) {
+      if (!inlineText) {
+        return reply(`❌ No text to translate. Reply to a message or provide text after the language code.\nUsage: ${prefix}trt en Hello world`);
+      }
+      textToTranslate = inlineText;
+    }
+
+    const translation = await translatte(textToTranslate, { to: langCode });
+
+    if (!translation || !translation.text) {
+      return reply("⚠️ Translation failed. Please try again later.");
+    }
+
+    const responseMessage = `
+*Original Text:* ${textToTranslate}
+*Translated Text:* ${translation.text}
+*Language:* ${langCode.toUpperCase()}
+    `;
+
+    await reply(responseMessage);
+    await m.react('✅');
+  } catch (error) {
+    console.error("Translate command error:", error);
+    return reply("⚠️ An error occurred while translating your text. Please try again later 🤕");
+  }
+});
 gmd(
   {
     pattern: 'toaudio',
