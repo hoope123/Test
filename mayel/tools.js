@@ -1322,19 +1322,26 @@ gmd({
       return reply("❌ Please reply to the message you want to translate.");
     }
 
-    // Ensure the quoted message contains text
-    if (!quoted.text) {
-      return reply("❌ The quoted message doesn't contain any text to translate.");
+    // Extract text from quoted message (universal)
+    let quotedText = "";
+    if (quoted.text) {
+      quotedText = quoted.text;
+    } else if (quoted.message?.conversation) {
+      quotedText = quoted.message.conversation;
+    } else if (quoted.message?.extendedTextMessage?.text) {
+      quotedText = quoted.message.extendedTextMessage.text;
+    } else {
+      return reply("❌ Could not find any text in the quoted message.");
     }
 
-    // Get the language code
+    // Get the target language code
     const langCode = q.trim();
     if (!langCode) {
       return reply(`❌ Provide a target language code.\nExample: ${prefix}trt en\nUse ${prefix}langcode to view available codes.`);
     }
 
-    // Translate the quoted text
-    const translation = await translatte(quoted.text, { to: langCode });
+    // Translate
+    const translation = await translatte(quotedText, { to: langCode });
 
     if (!translation || !translation.text) {
       return reply("⚠️ Translation failed. Please try again later.");
@@ -1347,7 +1354,6 @@ gmd({
     return reply("⚠️ An error occurred while translating your text. Please try again later.");
   }
 });
-
 gmd(
   {
     pattern: 'toaudio',
