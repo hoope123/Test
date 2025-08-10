@@ -1446,7 +1446,8 @@ gmd({
     }
 
     const responseMessage = `
-*Translated Text*: ${translation.text}
+🔤 *Translated Text*: 
+${translation.text}
 
     `;
 
