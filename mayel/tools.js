@@ -5,6 +5,7 @@ const { gmd, config, commands, GiftedFancy, Giftedttstalk, giftedTempmail, gifte
       { PREFIX: prefix, 
        OWNER_NUMBER: ownerNumber } = config, 
       fs = require('fs'),
+    translatte = require('translatte'),
       os = require('os'),
       axios = require('axios'), 
       path = require('path'),
@@ -1305,34 +1306,41 @@ async (Gifted, mek, m, { from, quoted, args, q, sender, reply }) => {
     }
 });
 
+
 gmd({
   pattern: "trt",
   alias: ["translate"],
-  desc: "🌍 Translate text Between Languages",
-  react: "⚡", 
-  category: "converter",  
+  desc: "🌍 Translate a quoted message to your target language",
+  react: "⚡",
+  category: "converter",
   filename: __filename
 }, async (Gifted, mek, m, { from, q, reply }) => {
   try {
-    const splitInput = q.split(" ");
-    if (splitInput.length < 2) {
-      return reply(`Please provide a target language code and text. Usage: ${prefix}trt sw I am Prince-Md Whatsapp User Bot`);
+    // Check if a message is quoted and has text
+    if (!m.quoted || !m.quoted.text) {
+      return reply("❌ Please quote a message to translate.");
     }
-    const targetLanguage = splitInput[0];
-    const text = splitInput.slice(1).join(" ");
-    const translationAPIUrl = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(text) + "&langpair=en|" + targetLanguage;
-    const response = await axios.get(translationAPIUrl);
-    const translatedText = response.data.responseData.translatedText;
-    const responseMessage = `
-*Original Text*: ${text}
-*Translated Text*: ${translatedText}
-*Language*: ${targetLanguage.toUpperCase()}
-    `;
-    return reply(responseMessage);
-    await m.react('✅');
+
+    const langCode = q.trim();
+
+    // If no language code provided
+    if (!langCode) {
+      return reply(`❌ Provide a target language code.\nExample: ${prefix}trt en\nUse ${prefix}langcode to view available codes.`);
+    }
+
+    const quotedText = m.quoted.text;
+
+    // Use translatte package for translation
+    const translation = await translatte(quotedText, { to: langCode });
+
+    if (!translation || !translation.text) {
+      return reply("⚠️ Translation failed. Please try again later.");
+    }
+
+    return reply(`🔤 *Translated Text:*\n${translation.text}`);
   } catch (error) {
-    console.log(error);
-    return reply("⚠️ An error occurred while translating your text. Please try again later🤕");
+    console.error("Translate command error:", error);
+    return reply("⚠️ An error occurred while translating your text. Please try again later.");
   }
 });
 
