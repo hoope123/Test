@@ -1308,7 +1308,6 @@ async (Gifted, mek, m, { from, quoted, args, q, sender, reply }) => {
 
 
 
-
 gmd({
   pattern: "trt",
   alias: ["translate"],
@@ -1318,32 +1317,30 @@ gmd({
   filename: __filename
 }, async (Gifted, mek, m, { from, quoted, q, reply }) => {
   try {
-    // Check if a message is quoted
+    // Ensure the user replied to a message
     if (!quoted) {
-      return reply("❌ Please reply to a message you want to translate.");
+      return reply("❌ Please reply to the message you want to translate.");
     }
 
-    // Check if quoted message has text
+    // Ensure the quoted message contains text
     if (!quoted.text) {
       return reply("❌ The quoted message doesn't contain any text to translate.");
     }
 
+    // Get the language code
     const langCode = q.trim();
-
-    // If no language code provided
     if (!langCode) {
       return reply(`❌ Provide a target language code.\nExample: ${prefix}trt en\nUse ${prefix}langcode to view available codes.`);
     }
 
-    const quotedText = quoted.text;
-
-    // Translate
-    const translation = await translatte(quotedText, { to: langCode });
+    // Translate the quoted text
+    const translation = await translatte(quoted.text, { to: langCode });
 
     if (!translation || !translation.text) {
       return reply("⚠️ Translation failed. Please try again later.");
     }
 
+    // Send translated text
     return reply(`🔤 *Translated Text:*\n${translation.text}`);
   } catch (error) {
     console.error("Translate command error:", error);
