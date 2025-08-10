@@ -1344,6 +1344,7 @@ gmd({
   }
 });
 */
+/*
 gmd({
   pattern: "trt",
   alias: ["translate"],
@@ -1395,6 +1396,60 @@ gmd({
     return reply("⚠️ An error occurred while translating your text. Please try again later 🤕");
   }
 });
+*/
+
+gmd({
+  pattern: "trt",
+  alias: ["translate"],
+  desc: "🌍 Translate text between languages",
+  react: "⚡",
+  category: "converter",
+  filename: __filename
+}, async (Gifted, mek, m, { from, q, reply, quoted }) => {
+  try {
+    if (!q && !quoted) {
+      return reply(`Please provide a target language code and text, or reply to a message.\nUsage:\n${prefix}trt en Hello world\n${prefix}trt en (as reply to a message)`);
+    }
+
+    const splitInput = q.trim().split(" ");
+    const targetLanguage = splitInput[0];
+
+    if (!targetLanguage) return reply("⚠️ Please provide a target language code.");
+
+    let text;
+
+    if (splitInput.length > 1) {
+      // If user typed both lang code and text
+      text = splitInput.slice(1).join(" ");
+    } else if (quoted) {
+      // Try all possible places quoted text might be
+      text = quoted.text || quoted.caption || quoted.message?.conversation || quoted.message?.extendedTextMessage?.text || "";
+    }
+
+    if (!text || text.trim() === "") {
+      return reply("⚠️ No text found to translate in the replied message.");
+    }
+
+    const translation = await translatte(text, { to: targetLanguage });
+
+    if (!translation || !translation.text) {
+      return reply("⚠️ Translation failed. Please try again later.");
+    }
+
+    const responseMessage = `
+*Original Text*: ${text}
+*Translated Text*: ${translation.text}
+*Language*: ${targetLanguage.toUpperCase()}
+    `;
+
+    await reply(responseMessage);
+    await m.react('✅');
+  } catch (error) {
+    console.error("Translate command error:", error);
+    return reply("⚠️ An error occurred while translating your text. Please try again later 🤕");
+  }
+});
+
 
 gmd(
   {
