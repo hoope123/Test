@@ -1407,23 +1407,32 @@ gmd({
   filename: __filename
 }, async (Gifted, mek, m, { from, q, reply, quoted }) => {
   try {
-    if (!q && !quoted) {
+    if (!q && (!quoted || Object.keys(quoted).length === 0)) {
       return reply(`Please provide a target language code and text, or reply to a message.\nUsage:\n${prefix}trt en Hello world\n${prefix}trt en (as reply to a message)`);
     }
 
     const splitInput = q.trim().split(" ");
     const targetLanguage = splitInput[0];
-
     if (!targetLanguage) return reply("⚠️ Please provide a target language code.");
 
     let text;
 
     if (splitInput.length > 1) {
-      // If user typed both lang code and text
+      // Direct text input
       text = splitInput.slice(1).join(" ");
-    } else if (quoted) {
-      // Try all possible places quoted text might be
-      text = quoted.text || quoted.caption || quoted.message?.conversation || quoted.message?.extendedTextMessage?.text || "";
+    } else if (quoted && Object.keys(quoted).length > 0) {
+      // Detect the type of quoted message and extract text
+      if (quoted.conversation) {
+        text = quoted.conversation;
+      } else if (quoted.extendedTextMessage?.text) {
+        text = quoted.extendedTextMessage.text;
+      } else if (quoted.imageMessage?.caption) {
+        text = quoted.imageMessage.caption;
+      } else if (quoted.videoMessage?.caption) {
+        text = quoted.videoMessage.caption;
+      } else {
+        text = "";
+      }
     }
 
     if (!text || text.trim() === "") {
@@ -1443,13 +1452,12 @@ gmd({
     `;
 
     await reply(responseMessage);
-    await m.react('✅');
+    await m.react("✅");
   } catch (error) {
     console.error("Translate command error:", error);
     return reply("⚠️ An error occurred while translating your text. Please try again later 🤕");
   }
 });
-
 
 gmd(
   {
