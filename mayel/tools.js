@@ -1446,9 +1446,8 @@ gmd({
     }
 
     const responseMessage = `
-*Original Text*: ${text}
 *Translated Text*: ${translation.text}
-*Language*: ${targetLanguage.toUpperCase()}
+
     `;
 
     await reply(responseMessage);
