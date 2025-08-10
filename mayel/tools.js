@@ -5,7 +5,7 @@ const { gmd, config, commands, GiftedFancy, Giftedttstalk, giftedTempmail, gifte
       { PREFIX: prefix, 
        OWNER_NUMBER: ownerNumber } = config, 
       fs = require('fs'),
-    translatte = require('translatte'),
+      translatte = require('translatte'),
       os = require('os'),
       axios = require('axios'), 
       path = require('path'),
@@ -1307,53 +1307,43 @@ async (Gifted, mek, m, { from, quoted, args, q, sender, reply }) => {
 });
 
 
-
 gmd({
   pattern: "trt",
   alias: ["translate"],
-  desc: "🌍 Translate a quoted message to your target language",
+  desc: "🌍 Translate text between languages",
   react: "⚡",
   category: "converter",
   filename: __filename
-}, async (Gifted, mek, m, { from, quoted, q, reply }) => {
+}, async (Gifted, mek, m, { from, q, reply }) => {
   try {
-    // Ensure the user replied to a message
-    if (!quoted) {
-      return reply("❌ Please reply to the message you want to translate.");
+    const splitInput = q.trim().split(" ");
+    if (splitInput.length < 2) {
+      return reply(`Please provide a target language code and text.\nUsage: ${prefix}trt sw I am Prince-Md Whatsapp User Bot`);
     }
 
-    // Extract text from quoted message (universal)
-    let quotedText = "";
-    if (quoted.text) {
-      quotedText = quoted.text;
-    } else if (quoted.message?.conversation) {
-      quotedText = quoted.message.conversation;
-    } else if (quoted.message?.extendedTextMessage?.text) {
-      quotedText = quoted.message.extendedTextMessage.text;
-    } else {
-      return reply("❌ Could not find any text in the quoted message.");
-    }
+    const targetLanguage = splitInput[0];
+    const text = splitInput.slice(1).join(" ");
 
-    // Get the target language code
-    const langCode = q.trim();
-    if (!langCode) {
-      return reply(`❌ Provide a target language code.\nExample: ${prefix}trt en\nUse ${prefix}langcode to view available codes.`);
-    }
-
-    // Translate
-    const translation = await translatte(quotedText, { to: langCode });
+    const translation = await translatte(text, { to: targetLanguage });
 
     if (!translation || !translation.text) {
       return reply("⚠️ Translation failed. Please try again later.");
     }
 
-    // Send translated text
-    return reply(`🔤 *Translated Text:*\n${translation.text}`);
+    const responseMessage = `
+*Original Text*: ${text}
+*Translated Text*: ${translation.text}
+*Language*: ${targetLanguage.toUpperCase()}
+    `;
+
+    await reply(responseMessage);
+    await m.react('✅');
   } catch (error) {
     console.error("Translate command error:", error);
-    return reply("⚠️ An error occurred while translating your text. Please try again later.");
+    return reply("⚠️ An error occurred while translating your text. Please try again later 🤕");
   }
 });
+
 gmd(
   {
     pattern: 'toaudio',
