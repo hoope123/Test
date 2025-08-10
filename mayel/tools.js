@@ -1307,6 +1307,8 @@ async (Gifted, mek, m, { from, quoted, args, q, sender, reply }) => {
 });
 
 
+
+
 gmd({
   pattern: "trt",
   alias: ["translate"],
@@ -1314,11 +1316,16 @@ gmd({
   react: "⚡",
   category: "converter",
   filename: __filename
-}, async (Gifted, mek, m, { from, q, reply }) => {
+}, async (Gifted, mek, m, { from, quoted, q, reply }) => {
   try {
-    // Check if a message is quoted and has text
-    if (!m.quoted || !m.quoted.text) {
-      return reply("❌ Please quote a message to translate.");
+    // Check if a message is quoted
+    if (!quoted) {
+      return reply("❌ Please reply to a message you want to translate.");
+    }
+
+    // Check if quoted message has text
+    if (!quoted.text) {
+      return reply("❌ The quoted message doesn't contain any text to translate.");
     }
 
     const langCode = q.trim();
@@ -1328,9 +1335,9 @@ gmd({
       return reply(`❌ Provide a target language code.\nExample: ${prefix}trt en\nUse ${prefix}langcode to view available codes.`);
     }
 
-    const quotedText = m.quoted.text;
+    const quotedText = quoted.text;
 
-    // Use translatte package for translation
+    // Translate
     const translation = await translatte(quotedText, { to: langCode });
 
     if (!translation || !translation.text) {
