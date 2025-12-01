@@ -40,7 +40,7 @@
     "form-data": "^4.0.1",
     "fs": "^0.0.1-security",
     "fs-extra": "^11.1.0",
-     "@whiskeysockets/baileys":"github:mrfr8nk/baileys",
+     "@whiskeysockets/baileys":"npm:gifted-baileys@2.0.0",
     "gifted-dls": "*",
     "git": "0.1.5",
     "isolated-vm": "^5.0.3",
