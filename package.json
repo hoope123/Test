@@ -9,10 +9,8 @@
     "node": "22.x"
   },
   "scripts": {
-    "start": "pm2 start index.js --name princemd",
-    "stop": "pm2 stop princemd",
-    "restart": "pm2 restart princemd"
-  },
+  "start": "node index.js"
+},
   "keywords": [
     "prince-md",
     "whatsapp-bot",
