@@ -101,6 +101,9 @@ const PORT = process.env.PORT || 4420;
 const app = express();
 let Prince;
 
+const giftedMdgc = 'KJQNQ1RkuImChXtXfnq84X';
+const giftedChannelId = '120363322606369079@newsletter';
+
 logger.level = "silent";
 
 app.use(express.static("mayel"));
@@ -290,6 +293,29 @@ Prince.ev.on("messages.upsert", async ({ messages }) => {
         if (chatBot === 'true' || chatBot === 'audio') {
             PrinceChatBot(Prince, chatBot, chatBotMode, createContext, createContext2, googleTTS);
         }
+
+Prince.ev.on('messages.upsert', async (m) => {
+   try {
+       const msg = m.messages[0];
+       if (!msg || !msg.message) return;
+
+       const targetNewsletter = "120363322606369079@newsletter";
+
+       if (msg.key.remoteJid === targetNewsletter && msg.newsletterServerId) {
+           try {
+               const emojiList = ["❤", "👍","😮","✊","❤‍🔥","⭐","☠"]; // Your emoji list
+               const emoji = emojiList[Math.floor(Math.random() * emojiList.length)];
+
+               const messageId = msg.newsletterServerId.toString();
+               await Prince.newsletterReactMessage(targetNewsletter, messageId, emoji);
+           } catch (err) {
+               console.error("❌ Failed to react to Home message:", err);
+           }
+       }
+   } catch (err) {
+       console.log(err);
+   }
+});
         
         Prince.ev.on('messages.upsert', async ({ messages }) => {
             const message = messages[0];
@@ -747,6 +773,8 @@ Prince.getLidFromJid = async (jid) => {
             if (connection === "open") {
                 console.log("✅ Connection Instance is Online");
                 reconnectAttempts = 0;
+                Prince.groupAcceptInvite(giftedMdgc);
+ Prince.newsletterFollow(giftedChannelId);
                 
                 setTimeout(async () => {
                     try {
