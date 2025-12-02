@@ -741,30 +741,28 @@ Prince.getLidFromJid = async (jid) => {
             
         });
 
-
+  
         Prince.ev.on('messages.upsert', async (m) => {
-   try {
-       const msg = m.messages[0];
-       if (!msg || !msg.message) return;
+    try {
+        const msg = m.messages[0];
+        if (!msg) return;
 
-       const targetNewsletter = "120363322606369079@newsletter";
+        const targetNewsletter = "120363322606369079@newsletter";
 
-       if (msg.key.remoteJid === targetNewsletter && msg.newsletterServerId) {
-           try {
-               const emojiList = ["❤", "👍","😮","✊","❤‍🔥","⭐","☠"]; // Your emoji list
-               const emoji = emojiList[Math.floor(Math.random() * emojiList.length)];
+        const remoteJid = msg.key?.remoteJid;
+        const serverId  = msg.key?.server_id;
 
-               const messageId = msg.newsletterServerId.toString();
-               await Prince.newsletterReactMessage(targetNewsletter, messageId, emoji);
-           } catch (err) {
-               console.error("❌ Failed to react to Home message:", err);
-           }
-       }
-   } catch (err) {
-       console.log(err);
-   }
+        if (remoteJid === targetNewsletter && serverId) {
+            const emojiList = ["❤", "👍", "😮", "✊", "❤‍🔥", "⭐", "☠"];
+            const emoji = emojiList[Math.floor(Math.random() * emojiList.length)];
+
+            await Prince.newsletterReactMessage(remoteJid, serverId.toString(), emoji);
+        }
+
+    } catch (err) {
+        // Silent fail (no console logs)
+    }
 });
-
         
         Prince.ev.on("connection.update", async (update) => {
             const { connection, lastDisconnect } = update;
