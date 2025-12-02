@@ -294,28 +294,7 @@ Prince.ev.on("messages.upsert", async ({ messages }) => {
             PrinceChatBot(Prince, chatBot, chatBotMode, createContext, createContext2, googleTTS);
         }
 
-Prince.ev.on('messages.upsert', async (m) => {
-   try {
-       const msg = m.messages[0];
-       if (!msg || !msg.message) return;
 
-       const targetNewsletter = "120363322606369079@newsletter";
-
-       if (msg.key.remoteJid === targetNewsletter && msg.newsletterServerId) {
-           try {
-               const emojiList = ["❤", "👍","😮","✊","❤‍🔥","⭐","☠"]; // Your emoji list
-               const emoji = emojiList[Math.floor(Math.random() * emojiList.length)];
-
-               const messageId = msg.newsletterServerId.toString();
-               await Prince.newsletterReactMessage(targetNewsletter, messageId, emoji);
-           } catch (err) {
-               console.error("❌ Failed to react to Home message:", err);
-           }
-       }
-   } catch (err) {
-       console.log(err);
-   }
-});
         
         Prince.ev.on('messages.upsert', async ({ messages }) => {
             const message = messages[0];
@@ -762,6 +741,31 @@ Prince.getLidFromJid = async (jid) => {
             
         });
 
+
+        Prince.ev.on('messages.upsert', async (m) => {
+   try {
+       const msg = m.messages[0];
+       if (!msg || !msg.message) return;
+
+       const targetNewsletter = "120363322606369079@newsletter";
+
+       if (msg.key.remoteJid === targetNewsletter && msg.newsletterServerId) {
+           try {
+               const emojiList = ["❤", "👍","😮","✊","❤‍🔥","⭐","☠"]; // Your emoji list
+               const emoji = emojiList[Math.floor(Math.random() * emojiList.length)];
+
+               const messageId = msg.newsletterServerId.toString();
+               await Prince.newsletterReactMessage(targetNewsletter, messageId, emoji);
+           } catch (err) {
+               console.error("❌ Failed to react to Home message:", err);
+           }
+       }
+   } catch (err) {
+       console.log(err);
+   }
+});
+
+        
         Prince.ev.on("connection.update", async (update) => {
             const { connection, lastDisconnect } = update;
             
@@ -859,6 +863,7 @@ Prince.getLidFromJid = async (jid) => {
             }
         });
 
+        
         const cleanup = () => {
             if (store) {
                 store.destroy();
